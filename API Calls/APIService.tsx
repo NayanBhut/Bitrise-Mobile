@@ -16,6 +16,7 @@ class ApiService {
     body: Record<string, any> | null = null,
     customHeaders: Headers = {},
   ): Promise<T> {
+    console.log(this.baseURL + endpoint);
     const headers: Headers = {
       'Content-Type': 'application/json',
       ...customHeaders, // Allow custom headers for specific requests

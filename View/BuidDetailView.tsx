@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Button, Text, View} from 'react-native';
+import {ActivityIndicator, Alert, Button, View} from 'react-native';
 import {StyleSheet} from 'react-native';
 import {BuildDetailModel} from '../API Calls/BuildDetailModel';
 import {AnsiComponent} from 'react-native-ansi-view';
@@ -7,7 +7,8 @@ import {AnsiComponent} from 'react-native-ansi-view';
 import {ScrollView} from 'react-native-gesture-handler';
 import {LogChunks} from '../API Calls/BuildDetailModel';
 import ApiService from '../API Calls/APIService';
-import {auth} from './Constant';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_CONFIG from './APIConstants/APIConstants';
 
 const BuildDetailView = ({navigation, route}) => {
   const [getBuildData, setBuildData] = useState<BuildDetailModel | null>(null);
@@ -41,15 +42,20 @@ const BuildDetailView = ({navigation, route}) => {
       })
       .catch(error => {
         setLoader(false);
-        console.error(error);
+        Alert.alert('Error', error);
       });
   }
 
-  function getBuildDetails(_appSlug: String, _buildSlug: String) {
+  async function getBuildDetails(_appSlug: string, _buildSlug: string) {
+    const auth: string | null = await AsyncStorage.getItem('token');
+    if (auth === null) {
+      return;
+    }
+
     setLoader(true);
 
-    const apiService = new ApiService('https://api.bitrise.io/v0.1/');
-    const url = `apps/${_appSlug}/builds/${_buildSlug}/log`;
+    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const url = API_CONFIG.endpoints.builds.logs(_appSlug, _buildSlug);
 
     apiService
       .get(url, {
@@ -57,19 +63,18 @@ const BuildDetailView = ({navigation, route}) => {
         Authorization: auth,
       })
       .then(data => {
-        // console.log('Builds are ', data);
         const buildsModel: BuildDetailModel = JSON.parse(JSON.stringify(data));
 
         const model: BuildDetailModel = buildsModel;
         model.log_chunks = buildsModel.log_chunks;
 
-        console.log(model);
         setBuildData(model);
-        console.log(getBuildData?.log_chunks ?? []);
-
         setLoader(false);
       })
-      .catch(error => console.log('Rejection Erorr ', error));
+      .catch(error => {
+        setLoader(false);
+        Alert.alert('Error', error);
+      });
   }
 
   useEffect(() => {

@@ -6,10 +6,9 @@ import {NavigationContainer} from '@react-navigation/native';
 import BuildListView from './View/BuildLists';
 // import BuildDetailView from './View/BuildDetailView';
 import BuildDetailView from './View/BuidDetailView';
+import LoginForm from './View/TokenForm';
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
     <NavigationContainer>
       <MyStack />
@@ -20,6 +19,14 @@ function App(): React.JSX.Element {
 function MyStack() {
   return (
     <Stack.Navigator>
+      <Stack.Screen
+        name="LoginForm"
+        component={LoginForm}
+        options={{
+          headerTintColor: 'white',
+          headerStyle: {backgroundColor: 'tomato'},
+        }}
+      />
       <Stack.Screen
         name="Apps List"
         component={AppList}

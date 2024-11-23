@@ -12,25 +12,33 @@ import {
 import {Build, BuildModel, BuildState} from '../API Calls/BuildModel';
 import BuildItem from './BuildListViews/BuildItem';
 import BuildTriggerModal from './BuildTriggerModal/BuildTriggerModal';
-import {auth} from './Constant';
+
 import ApiService from '../API Calls/APIService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_CONFIG from './APIConstants/APIConstants';
 
 const BuildListView = ({navigation, route}) => {
   const [getBuilds, setBuilds] = useState<BuildModel | null>(null);
   const [getSpinner, setSpinner] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
+  const [isAbortVisible, setAbortVisible] = useState(true);
+  const [abortBuildSlug, setAbortBuildSlug] = useState('');
 
-  function getAppBuilds(_slug: String, next: String | null) {
-    var url = `apps/${_slug}/builds?limit=20`;
+  async function getAppBuilds(_slug: string, next: string | null) {
+    const auth: string | null = await AsyncStorage.getItem('token');
+    if (auth === null) {
+      return;
+    }
+
     if (next === null && (getBuilds?.data ?? []).length === 0) {
     } else if (next !== null) {
-      url = url + `&next=${next?.toString()}`;
     } else {
       return;
     }
     setSpinner(true);
 
-    const apiService = new ApiService('https://api.bitrise.io/v0.1/');
+    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const url = API_CONFIG.endpoints.builds.list(_slug, next);
 
     apiService
       .get(url, {
@@ -42,43 +50,34 @@ const BuildListView = ({navigation, route}) => {
 
         var buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
         var buildData: Build[] = getBuilds?.data ?? [];
-        var newPageBuilds: Build[] = buildsModel.data;
+        var newPageBuilds: Build[] = buildsModel.data ?? [];
         var totalBuilds: Build[] = buildData.concat(newPageBuilds);
         buildsModel.data = totalBuilds;
 
         setBuilds(buildsModel);
       })
-      .catch(error => console.log('Rejection Erorr ', error));
+      .catch(error => {
+        setSpinner(false);
+        Alert.alert('Error', error);
+      });
   }
 
-  async function abortBuild(buildSlug: string) {
+  async function abortBuild(buildSlug: string, reason: string) {
+    const auth: string | null = await AsyncStorage.getItem('token');
+    if (auth === null) {
+      return;
+    }
+
     setSpinner(true);
-    const myHeaders = new Headers();
-    myHeaders.append('accept', 'application/json');
-    myHeaders.append('Authorization', auth);
-    myHeaders.append('Content-Type', 'application/json');
-
-    // const raw = JSON.stringify({
-    //   abort_reason: 'testing',
-    //   abort_with_success: true,
-    //   skip_notifications: true,
-    // });
-
-    // const requestOptions: RequestInit = {
-    //   method: 'POST',
-    //   headers: myHeaders,
-    //   body: raw,
-    //   redirect: 'follow',
-    // };
 
     const objBody = {
-      abort_reason: 'testing',
+      abort_reason: reason,
       abort_with_success: true,
       skip_notifications: true,
     };
-    const apiService = new ApiService('https://api.bitrise.io/v0.1/apps/');
-    var url = `${route.params.slug}/builds/${buildSlug}/abort`;
 
+    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const url = API_CONFIG.endpoints.builds.abort(route.params.slug, buildSlug);
     apiService
       .post(url, objBody, {
         'content-type': 'application/json',
@@ -99,7 +98,10 @@ const BuildListView = ({navigation, route}) => {
           },
         ]);
       })
-      .catch(error => console.error(error));
+      .catch(error => {
+        setSpinner(false);
+        console.error(error);
+      });
   }
 
   useEffect(() => {
@@ -186,7 +188,10 @@ const BuildListView = ({navigation, route}) => {
                 route={route}
                 colorStyle={colorStyle}
                 colorStyleSideLine={colorStyleSideLine}
-                abortBuild={abortBuild}
+                abortBuild={slug => {
+                  setAbortBuildSlug(slug);
+                  setAbortVisible(true);
+                }}
               />
             );
           }}
@@ -202,6 +207,18 @@ const BuildListView = ({navigation, route}) => {
             getAppBuilds(route.params.slug, null);
           }
           setModalVisible(false);
+        }}
+        // eslint-disable-next-line eqeqeq
+        isAbortVisible={isAbortVisible && abortBuildSlug.length != 0}
+        abortBuild={(isAbort, reason) => {
+          setAbortVisible(false);
+          setModalVisible(false);
+          if (isAbort) {
+            abortBuild(abortBuildSlug, reason);
+            setAbortBuildSlug('');
+          } else {
+            setAbortBuildSlug('');
+          }
         }}
       />
 
@@ -227,5 +244,23 @@ const styleSheet = StyleSheet.create({
   indicator: {
     backgroundColor: 'gray',
     margin: 10,
+  },
+  spinnerView: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    height: '100%',
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+  },
+  input: {
+    width: '100%',
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 10,
+    paddingLeft: 10,
+    color: 'black',
   },
 });

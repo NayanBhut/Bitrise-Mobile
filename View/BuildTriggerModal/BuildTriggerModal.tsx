@@ -10,8 +10,9 @@ import {
   Button,
   Alert,
 } from 'react-native';
-import {auth} from '../Constant';
 import ApiService from '../../API Calls/APIService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_CONFIG from '../APIConstants/APIConstants';
 
 export interface CustomKeyModel {
   id: string;
@@ -22,6 +23,8 @@ export interface CustomKeyModel {
 type BuildTriggerModalProps = {
   slug: string;
   visible: boolean;
+  isAbortVisible: boolean;
+  abortBuild: (abort: boolean, reason: string) => void;
   cancel: (status: boolean) => void;
 };
 
@@ -32,6 +35,7 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
   const [editingItem, setEditingItem] = useState<CustomKeyModel | null>(null);
   const [branchName, setBranchName] = useState('');
   const [workFlowValue, setWorkFlowValue] = useState('');
+  const [abortReason, setAbortReason] = useState('');
 
   // Add new data
   const addData = () => {
@@ -79,7 +83,12 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
     setEditingItem(null); // Reset editing state
   };
 
-  function triggerBuid() {
+  async function triggerBuid() {
+    const auth: string | null = await AsyncStorage.getItem('token');
+    if (auth === null) {
+      return;
+    }
+
     const arrEnvData = data.map(item => {
       return {
         mapped_to: item.keyName,
@@ -114,8 +123,8 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
         environments: arrEnvData,
       },
     };
-    const url = `apps/${props.slug}/builds`;
-    const apiService = new ApiService('https://api.bitrise.io/v0.1/');
+    const url = API_CONFIG.endpoints.builds.trigger(props.slug);
+    const apiService = new ApiService(API_CONFIG.BASE_URL);
 
     apiService
       .post(url, objTrigger, {
@@ -124,8 +133,6 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
       })
       .then(response => {
         var result = JSON.parse(JSON.stringify(response));
-        // {"build_number": 19, "build_slug": "af93e978-311b-4a1b-be80-706b68cb21ad", "build_url": "https://app.bitrise.io/build/af93e978-311b-4a1b-be80-706b68cb21ad", "message": "webhook processed", "service": "bitrise", "slug": "53b0bf38-5809-4ffd-8934-2b22ee1c36e5", "status": "ok", "triggered_workflow": "Debug"}
-        // {"message": "Please note that we haven't started a build as you don't have enough credits.", "service": "bitrise", "slug": "c130c8fe-97ba-4383-b2f3-617d266ab0ff", "status": "error"}
         const message =
           result.status === 'error' ? result.message : 'Build Triggered';
         Alert.alert('Build', message, [
@@ -137,101 +144,141 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
           },
         ]);
       })
-      .catch(error => console.error(error));
+      .catch(error => {
+        Alert.alert('Error', error);
+      });
   }
 
   return (
-    <Modal visible={props.visible} animationType="slide" transparent={true}>
+    <Modal
+      visible={props.visible || props.isAbortVisible}
+      animationType="slide"
+      transparent={true}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Build Configuration</Text>
+          {props.isAbortVisible ? (
+            <View style={styles.modalContainer}>
+              <Text style={styles.abortReasonText}>Add abort Reason</Text>
+              <TextInput
+                autoCapitalize="none"
+                keyboardType="email-address"
+                spellCheck={false}
+                style={styles.input}
+                placeholder="Please add reason"
+                placeholderTextColor="black"
+                value={abortReason}
+                onChangeText={setAbortReason}
+              />
+              <View style={styles.viewModalButton}>
+                <TouchableOpacity
+                  onPress={() => {
+                    props.abortBuild(false, abortReason);
+                  }}
+                  style={styles.closeButton}>
+                  <Text style={styles.closeText}>Close</Text>
+                </TouchableOpacity>
 
-          <View style={styles.viewBranchWorkflow}>
-            <Text style={styles.textBranchWorkFLow}>Branch Name</Text>
-            <TextInput
-              autoCapitalize="none"
-              keyboardType="email-address"
-              spellCheck={false}
-              style={styles.input}
-              placeholder="Branch Name"
-              placeholderTextColor="black"
-              value={branchName}
-              onChangeText={setBranchName}
-            />
-
-            <Text style={styles.textBranchWorkFLow}>WorkFlow Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="WorkFlow Name"
-              placeholderTextColor="black"
-              value={workFlowValue}
-              onChangeText={setWorkFlowValue}
-            />
-          </View>
-
-          <Text style={styles.customKey}>
-            {editingItem ? 'Edit Keys' : 'Add Custom Keys'}
-          </Text>
-
-          {/* Form Inputs */}
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Key Name"
-            placeholderTextColor="black"
-            value={keyName}
-            onChangeText={setKeyName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Key Value"
-            placeholderTextColor="black"
-            value={keyValue}
-            onChangeText={setKeyValue}
-          />
-
-          {/* Add or Save Button */}
-          <Button
-            title={editingItem ? 'Save Changes' : 'Add Custom Keys'}
-            onPress={editingItem ? saveEditedData : addData}
-          />
-
-          {/* List of Data */}
-          <FlatList
-            data={data}
-            keyExtractor={item => item.id}
-            style={styles.styleFlatList}
-            renderItem={({item}) => (
-              <View style={styles.listItem}>
-                <Text style={styles.itemText}>
-                  {item.keyName}: {item.keyValue}
-                </Text>
-                <View style={styles.listItemActions}>
-                  <TouchableOpacity
-                    onPress={() => editData(item)}
-                    style={styles.editButton}>
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    props.abortBuild(true, abortReason);
+                  }}
+                  style={styles.triggerButton}>
+                  <Text style={styles.triggerText}>Abort Build</Text>
+                </TouchableOpacity>
               </View>
-            )}
-          />
+            </View>
+          ) : (
+            <View style={styles.modalContainer}>
+              <Text style={styles.title}>Build Configuration</Text>
 
-          {/* Close Modal Button */}
-          <View style={styles.viewModalButton}>
-            <TouchableOpacity
-              onPress={() => {
-                props.cancel(false);
-              }}
-              style={styles.closeButton}>
-              <Text style={styles.closeText}>Close</Text>
-            </TouchableOpacity>
+              <View style={styles.viewBranchWorkflow}>
+                <Text style={styles.textBranchWorkFLow}>Branch Name</Text>
+                <TextInput
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  spellCheck={false}
+                  style={styles.input}
+                  placeholder="Branch Name"
+                  placeholderTextColor="black"
+                  value={branchName}
+                  onChangeText={setBranchName}
+                />
 
-            <TouchableOpacity
-              onPress={triggerBuid}
-              style={(styles.triggerButton)}>
-              <Text style={styles.triggerText}>Trigger Build</Text>
-            </TouchableOpacity>
-          </View>
+                <Text style={styles.textBranchWorkFLow}>WorkFlow Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="WorkFlow Name"
+                  placeholderTextColor="black"
+                  value={workFlowValue}
+                  onChangeText={setWorkFlowValue}
+                />
+              </View>
+
+              <Text style={styles.customKey}>
+                {editingItem ? 'Edit Keys' : 'Add Custom Keys'}
+              </Text>
+
+              {/* Form Inputs */}
+              <TextInput
+                style={styles.input}
+                placeholder="Enter Key Name"
+                placeholderTextColor="black"
+                value={keyName}
+                onChangeText={setKeyName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter Key Value"
+                placeholderTextColor="black"
+                value={keyValue}
+                onChangeText={setKeyValue}
+              />
+
+              {/* Add or Save Button */}
+              <Button
+                title={editingItem ? 'Save Changes' : 'Add Custom Keys'}
+                onPress={editingItem ? saveEditedData : addData}
+              />
+
+              {/* List of Data */}
+              <FlatList
+                data={data}
+                keyExtractor={item => item.id}
+                style={styles.styleFlatList}
+                renderItem={({item}) => (
+                  <View style={styles.listItem}>
+                    <Text style={styles.itemText}>
+                      {item.keyName}: {item.keyValue}
+                    </Text>
+                    <View style={styles.listItemActions}>
+                      <TouchableOpacity
+                        onPress={() => editData(item)}
+                        style={styles.editButton}>
+                        <Text style={styles.editButtonText}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              />
+
+              {/* Close Modal Button */}
+              <View style={styles.viewModalButton}>
+                <TouchableOpacity
+                  onPress={() => {
+                    props.cancel(false);
+                  }}
+                  style={styles.closeButton}>
+                  <Text style={styles.closeText}>Close</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={triggerBuid}
+                  style={styles.triggerButton}>
+                  <Text style={styles.triggerText}>Trigger Build</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -247,9 +294,9 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '90%',
-    padding: 20,
     backgroundColor: 'white',
     borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   title: {
@@ -346,6 +393,13 @@ const styles = StyleSheet.create({
     minHeight: 0,
     flexGrow: 0,
     flexDirection: 'column',
+  },
+  abortReasonText: {
+    fontWeight: '600',
+    fontSize: 20,
+    paddingBottom: 10,
+    textAlign: 'center',
+    color: 'black',
   },
 });
 

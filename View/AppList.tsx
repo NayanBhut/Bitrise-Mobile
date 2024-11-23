@@ -1,7 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Alert,
+  Button,
   Pressable,
   SafeAreaView,
   SectionList,
@@ -10,8 +11,9 @@ import {
   View,
 } from 'react-native';
 import {AppsModel, Apps} from '../API Calls/AppsModel';
-import {auth} from './Constant';
 import ApiService from '../API Calls/APIService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import API_CONFIG from './APIConstants/APIConstants';
 
 interface NavigationProps {
   navigate: (route: string, {}) => void;
@@ -24,24 +26,27 @@ interface Section {
   data: Apps[];
 }
 
-const AppList = ({navigation}: {navigation: NavigationProps}) => {
+const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
   const [dataModel, setDataModel] = useState<AppsModel | null>(null);
 
   const [getSpinner, setSpinner] = useState(false);
   const [getSectionData, setSectionData] = useState<Section[]>([]);
 
-  function getAPIData(next: String | null) {
-    var url = 'me/apps?limit=20';
+  async function getAPIData(next: string | null) {
+    const auth: string | null = await AsyncStorage.getItem('token');
+    if (auth === null) {
+      return;
+    }
+
     if (next === null && (dataModel?.data ?? []).length === 0) {
     } else if (next !== null) {
-      url = url + `&next=${next?.toString()}`;
     } else {
       return;
     }
 
     setSpinner(true);
-    const apiService = new ApiService('https://api.bitrise.io/v0.1/');
-
+    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const url = API_CONFIG.endpoints.apps.list(next);
     const response = apiService.get(url, {
       'content-type': 'application/json',
       Authorization: auth,
@@ -59,7 +64,10 @@ const AppList = ({navigation}: {navigation: NavigationProps}) => {
 
         convertToSection(appModel);
       })
-      .catch(error => console.log('Rejection Erorr ', error));
+      .catch(error => {
+        setSpinner(false);
+        Alert.alert('Error', error);
+      });
   }
 
   function convertToSection(appModel: AppsModel | null) {
@@ -68,13 +76,10 @@ const AppList = ({navigation}: {navigation: NavigationProps}) => {
     // Initialize the array as an array of objects where the key is a string and the value is an array of Apps
     var arrSectionData: Section[] = [];
 
-    // console.log(arrSectionData);
-
     const allData: Apps[] = (model?.data ?? []).sort((a, b) =>
       a.owner.name.localeCompare(b.owner.name),
     );
 
-    // console.log(allData);
     var currentKey = '';
     var arrData: Apps[] = [];
 
@@ -96,18 +101,26 @@ const AppList = ({navigation}: {navigation: NavigationProps}) => {
 
     const sectionData: Section = {title: currentKey, data: arrData};
     arrSectionData.push(sectionData);
-
     setSectionData(arrSectionData);
-
-    console.log('arrSectionData', arrSectionData.length);
   }
 
   useEffect(() => {
-    console.log('Use Effect Called');
-    if (auth != '') {
-      getAPIData(null);
-    }
-  });
+    setDataModel(route.params.appList);
+    convertToSection(route.params.appList);
+    navigation.setOptions({
+      // eslint-disable-next-line react/no-unstable-nested-components
+      headerRight: () => (
+        <Button
+          onPress={() => {
+            AsyncStorage.clear().then(() => {
+              navigation.goBack();
+            });
+          }}
+          title="Log Out"
+        />
+      ),
+    });
+  }, [route.params]);
 
   // Render each item in a section
   const renderItem = ({item}: {item: Apps}) => (
@@ -132,13 +145,7 @@ const AppList = ({navigation}: {navigation: NavigationProps}) => {
     </View>
   );
 
-  return auth === '' ? (
-    <View style={styleSheet.noTokenView}>
-      <Text style={styleSheet.noTokentext}>
-        Please set auth token in Constant.tsx file
-      </Text>
-    </View>
-  ) : (
+  return (
     <SafeAreaView style={styleSheet.mainView}>
       <View style={styleSheet.mainView}>
         <SectionList
