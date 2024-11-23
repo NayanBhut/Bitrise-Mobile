@@ -16,11 +16,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu' # See 'Supported distributions' for available options
+          java-version: '17'
       - name: Generate android and iOS build
         run: |
           npm install && cd ios && pod install
           cd ..
           cd android
+          java --version
           "$(pwd)/gradlew" assembleRelease
 
           # xcodebuild -sdk iphoneos -configuration Debug -workspace AzurePipeline.xcworkspace -scheme AzurePipeline build -verbose -skipMacroValidation
