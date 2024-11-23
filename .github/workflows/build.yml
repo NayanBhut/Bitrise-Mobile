@@ -1,0 +1,27 @@
+name: Generate android and iOS build
+
+on:
+  schedule:
+    - cron: "00 17 01 * *" # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Generate android and iOS build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate android and iOS build
+        run: |
+          npm install && cd ios && pod install
+          cd ..
+          cd android
+          "$(pwd)/gradlew" assembleRelease
+
+          # xcodebuild -sdk iphoneos -configuration Debug -workspace AzurePipeline.xcworkspace -scheme AzurePipeline build -verbose -skipMacroValidation
+          
