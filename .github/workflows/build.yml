@@ -27,6 +27,6 @@ jobs:
           cd android
           java --version
           "$(pwd)/gradlew" assembleRelease
-
+          ls -la $(pwd)/app/build/outputs/apk #/app-release.apk
           # xcodebuild -sdk iphoneos -configuration Debug -workspace AzurePipeline.xcworkspace -scheme AzurePipeline build -verbose -skipMacroValidation
           
