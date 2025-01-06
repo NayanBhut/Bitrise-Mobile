@@ -23,7 +23,7 @@ jobs:
       - name: Generate android and iOS build
         run: |
           npm install && cd ios && pod install
-          xcodebuild -sdk iphoneos -configuration Debug -workspace "AzurePipeline.xcworkspace"  -scheme "AzurePipeline" -sdk iphonesimulator -derivedDataPath $(pwd)
+          xcodebuild -sdk iphoneos -configuration Debug -workspace "Bitrise.xcworkspace"  -scheme "Bitrise" -sdk iphonesimulator -derivedDataPath $(pwd)
           cd ..
           cd android
           java --version
