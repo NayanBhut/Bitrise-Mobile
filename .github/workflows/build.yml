@@ -27,6 +27,10 @@ jobs:
           java --version
           "$(pwd)/gradlew" assembleRelease
           ls -la $(pwd)/app/build/outputs/apk/release #/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bitrise.apk
+          path: $(pwd)/app/build/outputs/apk/release/app-release.apk
   
   ios_build:
     name: Generate iOS simulator build
@@ -39,7 +43,10 @@ jobs:
         with:
           distribution: 'zulu' # See 'Supported distributions' for available options
           java-version: '17'
-      - name: Generate android and iOS build
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Generate iOS Simulator build
         run: |
           npm install && cd ios && pod install
           xcodebuild -sdk iphonesimulator -configuration Debug -workspace "Bitrise.xcworkspace" -scheme "Bitrise" -derivedDataPath $(pwd)
