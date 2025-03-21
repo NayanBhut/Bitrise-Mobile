@@ -27,10 +27,11 @@ jobs:
           java --version
           "$(pwd)/gradlew" assembleRelease
           ls -la $(pwd)/app/build/outputs/apk/release #/app-release.apk
+          
       - uses: actions/upload-artifact@v4
         with:
           name: Bitrise.apk
-          path: $(pwd)/app/build/outputs/apk/release/app-release.apk
+          path: "$(pwd)/app/build/outputs/apk/release/app-release.apk"
   
   ios_build:
     name: Generate iOS simulator build
