@@ -35,7 +35,7 @@ jobs:
           find $PWD -type f | grep "app-release.apk"    
       - uses: actions/upload-artifact@v4
         with:
-          name: Build-Artifact
+          name: Bitrise.apk
           path: "android/app/build/outputs/apk/release/app-release.apk"
           
   
