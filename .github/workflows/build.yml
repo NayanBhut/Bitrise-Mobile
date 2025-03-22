@@ -27,11 +27,17 @@ jobs:
           java --version
           "$(pwd)/gradlew" assembleRelease
           ls -la $(pwd)/app/build/outputs/apk/release #/app-release.apk
+          find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
           
       - uses: actions/upload-artifact@v4
         with:
           name: Build-Artifact
-          path: "$(pwd)/app/build/outputs/apk/release"
+          path: "app/build/outputs/apk/release/app-release.apk"
+      - name: Check Build Path
+        run: |
+          ls -la "$(pwd)/app"
+          find . | sed -e "s/[^-][^\/]*\// |/g" -e "s/|\([^ ]\)/|-\1/"
+          
   
   ios_build:
     name: Generate iOS simulator build
