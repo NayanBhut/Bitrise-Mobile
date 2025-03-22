@@ -30,8 +30,8 @@ jobs:
           
       - uses: actions/upload-artifact@v4
         with:
-          name: Bitrise.apk
-          path: "$(pwd)/app/build/outputs/apk/release/app-release.apk"
+          name: Build-Artifact
+          path: "$(pwd)/app/build/outputs/apk/release"
   
   ios_build:
     name: Generate iOS simulator build
