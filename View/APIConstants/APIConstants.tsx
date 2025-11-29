@@ -8,7 +8,7 @@ const API_CONFIG = {
     apps: {
       list: (next: string | null) => {
         const nextPageToken = next != null ? `&next=${next?.toString()}` : '';
-        return `me/apps?${API_CONFIG.PAGINATION_PARAM}${nextPageToken}`;
+        return `apps?${API_CONFIG.PAGINATION_PARAM}${nextPageToken}`;
       },
     },
     builds: {
