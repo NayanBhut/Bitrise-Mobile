@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  // Base URL for Azure DevOps REST API
+  // Base URL for Bitrise REST API https://docs.bitrise.io/en/bitrise-ci/api/api-overview.html
   BASE_URL: 'https://api.bitrise.io/v0.1/',
   API_VERSION: '',
   PAGINATION_PARAM: 'limit=20',
