@@ -1,12 +1,21 @@
 import React from 'react';
-import {Button, useColorScheme} from 'react-native';
+import {Button} from 'react-native';
 import AppList from './View/AppList';
-import {createStackNavigator} from '@react-navigation/stack';
+import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
 import {NavigationContainer} from '@react-navigation/native';
 import BuildListView from './View/BuildLists';
-// import BuildDetailView from './View/BuildDetailView';
 import BuildDetailView from './View/BuidDetailView';
 import LoginForm from './View/TokenForm';
+
+// Define types for your navigation stack
+type RootStackParamList = {
+  LoginForm: undefined;
+  'Apps List': undefined;
+  BuildList: undefined;
+  BuildDetailView: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
   return (
@@ -18,45 +27,35 @@ function App(): React.JSX.Element {
 
 function MyStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerTintColor: 'white',
+        headerStyle: {backgroundColor: 'tomato'},
+      }}>
       <Stack.Screen
         name="LoginForm"
         component={LoginForm}
-        options={{
-          headerTintColor: 'white',
-          headerStyle: {backgroundColor: 'tomato'},
-        }}
       />
       <Stack.Screen
         name="Apps List"
         component={AppList}
-        options={{
-          headerTintColor: 'white',
-          headerStyle: {backgroundColor: 'tomato'},
-        }}
       />
       <Stack.Screen
         name="BuildList"
         component={BuildListView}
         options={{
-          headerTintColor: 'white',
-          headerStyle: {backgroundColor: 'tomato'},
-          // eslint-disable-next-line react/no-unstable-nested-components
-          headerRight: () => <Button title="Trigger Build" />,
+          headerRight: () => <Button title="Trigger Build" onPress={() => {}} />,
         }}
       />
       <Stack.Screen
         name="BuildDetailView"
         component={BuildDetailView}
         options={{
-          headerTintColor: 'white',
-          headerStyle: {backgroundColor: 'tomato'},
-          // eslint-disable-next-line react/no-unstable-nested-components
-          headerRight: () => <Button title="Get Full log" />,
+          headerRight: () => <Button title="Get Full log" onPress={() => {}} />,
         }}
       />
     </Stack.Navigator>
   );
 }
-const Stack = createStackNavigator();
+
 export default App;

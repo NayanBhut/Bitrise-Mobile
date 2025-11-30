@@ -37,7 +37,7 @@ const BuildListView = ({navigation, route}) => {
     }
     setSpinner(true);
 
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.builds.list(_slug, next);
 
     apiService
@@ -76,7 +76,7 @@ const BuildListView = ({navigation, route}) => {
       skip_notifications: true,
     };
 
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.builds.abort(route.params.slug, buildSlug);
     apiService
       .post(url, objBody, {

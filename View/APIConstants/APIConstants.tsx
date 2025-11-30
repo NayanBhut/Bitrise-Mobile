@@ -1,7 +1,7 @@
 const API_CONFIG = {
   // Base URL for Bitrise REST API https://docs.bitrise.io/en/bitrise-ci/api/api-overview.html
-  BASE_URL: 'https://api.bitrise.io/v0.1/',
-  API_VERSION: '',
+  BASE_URL: 'https://api.bitrise.io/',
+  API_VERSION: 'v0.1/',
   PAGINATION_PARAM: 'limit=20',
 
   endpoints: {

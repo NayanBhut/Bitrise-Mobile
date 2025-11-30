@@ -124,7 +124,7 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
       },
     };
     const url = API_CONFIG.endpoints.builds.trigger(props.slug);
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
 
     apiService
       .post(url, objTrigger, {

@@ -7,6 +7,7 @@ class ApiService {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
+    console.log(this.baseURL);
   }
 
   // Common method to handle API requests

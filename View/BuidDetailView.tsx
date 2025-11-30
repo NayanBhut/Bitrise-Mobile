@@ -54,7 +54,7 @@ const BuildDetailView = ({navigation, route}) => {
 
     setLoader(true);
 
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.builds.logs(_appSlug, _buildSlug);
 
     apiService

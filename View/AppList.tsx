@@ -45,7 +45,7 @@ const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
     }
 
     setSpinner(true);
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.apps.list(next);
     const response = apiService.get(url, {
       'content-type': 'application/json',
@@ -119,6 +119,7 @@ const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
           title="Log Out"
         />
       ),
+      headerLeft: () => null,
     });
   }, [route.params]);
 
