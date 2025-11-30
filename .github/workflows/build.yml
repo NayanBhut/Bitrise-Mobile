@@ -3,9 +3,9 @@ on:
   schedule:
     - cron: "00 17 01 * *" # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
   push:
-    branches: ["main"]
+    branches: ["main", "version-upgrade"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "version-upgrade"]
 
 jobs:
   android_build:
