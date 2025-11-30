@@ -1,0 +1,37 @@
+name: Generate iOS Build
+on:
+  schedule:
+    - cron: "00 17 01 * *" # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+  workflow_dispatch:
+
+jobs:
+  ios_build:
+    name: Generate iOS Simulator Build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Generate iOS Simulator Build
+        run: |
+          npm install
+          cd ios
+          pod install
+          xcodebuild \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -workspace "Bitrise.xcworkspace" \
+            -scheme "Bitrise" \
+            -derivedDataPath $(pwd)
+
+      - name: Upload iOS Artifact (Optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bitrise-ios-build
+          path: |
+            ios/build/Bitrise/Build/Products/Debug-iphonesimulator/
+            # Adjust the path based on your actual build output location
