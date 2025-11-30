@@ -1,0 +1,44 @@
+name: Generate Android Build
+on:
+  schedule:
+    - cron: "00 17 01 * *" # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+  workflow_dispatch:  
+
+jobs:
+  android_build:
+    name: Generate Android Build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Generate Android APK
+        run: |
+          npm install
+          cd android
+          java --version
+          ./gradlew assembleRelease
+          find $PWD -type f | grep "app-release.apk"
+          ls -la $(pwd)/app/build/outputs/apk/release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bitrise.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
