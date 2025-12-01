@@ -25,42 +25,44 @@ const BuildListView = ({navigation, route}) => {
   const [abortBuildSlug, setAbortBuildSlug] = useState('');
 
   async function getAppBuilds(_slug: string, next: string | null) {
-    const auth: string | null = await AsyncStorage.getItem('token');
-    if (auth === null) {
-      return;
-    }
-
-    if (next === null && (getBuilds?.data ?? []).length === 0) {
-    } else if (next !== null) {
-    } else {
-      return;
-    }
-    setSpinner(true);
-
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
-    const url = API_CONFIG.endpoints.builds.list(_slug, next);
-
-    apiService
-      .get(url, {
-        'content-type': 'application/json',
-        Authorization: auth,
-      })
-      .then(data => {
-        setSpinner(false);
-
-        var buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
-        var buildData: Build[] = getBuilds?.data ?? [];
-        var newPageBuilds: Build[] = buildsModel.data ?? [];
-        var totalBuilds: Build[] = buildData.concat(newPageBuilds);
-        buildsModel.data = totalBuilds;
-
-        setBuilds(buildsModel);
-      })
-      .catch(error => {
-        setSpinner(false);
-        Alert.alert('Error', error);
-      });
+  const auth: string | null = await AsyncStorage.getItem('token');
+  if (auth === null) {
+    return;
   }
+
+  // Only fetch if:
+  // - It's the first load (next === null && no data)
+  // - Or it's pagination (next !== null)
+  if (next === null && (getBuilds?.data ?? []).length > 0) {
+    return; // Skip if data already exists and not paginating
+  }
+
+  setSpinner(true);
+
+  const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
+  const url = API_CONFIG.endpoints.builds.list(_slug, next);
+  
+  apiService
+    .get(url, {
+      'content-type': 'application/json',
+      Authorization: auth,
+    })
+    .then(data => {
+      setSpinner(false);
+
+      const buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
+      const buildData: Build[] = getBuilds?.data ?? [];
+      const newPageBuilds: Build[] = buildsModel.data ?? [];
+      const totalBuilds: Build[] = [...buildData, ...newPageBuilds];
+      buildsModel.data = totalBuilds;
+
+      setBuilds(buildsModel);
+    })
+    .catch(error => {
+      setSpinner(false);
+      Alert.alert('Error', error.message || 'Failed to fetch builds');
+    });
+}
 
   async function abortBuild(buildSlug: string, reason: string) {
     const auth: string | null = await AsyncStorage.getItem('token');
@@ -76,7 +78,7 @@ const BuildListView = ({navigation, route}) => {
       skip_notifications: true,
     };
 
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.builds.abort(route.params.slug, buildSlug);
     apiService
       .post(url, objBody, {
@@ -105,19 +107,18 @@ const BuildListView = ({navigation, route}) => {
   }
 
   useEffect(() => {
-    getAppBuilds(route.params.slug, null);
-    navigation.setOptions({
-      // eslint-disable-next-line react/no-unstable-nested-components
-      headerRight: () => (
-        <Button
-          onPress={() => {
-            setModalVisible(true);
-          }}
-          title="Trigger Build"
-        />
-      ),
-    });
-  }, [route.params.slug, getBuilds]);
+  getAppBuilds(route.params.slug, null);
+  navigation.setOptions({
+    headerRight: () => (
+      <Button
+        onPress={() => {
+          setModalVisible(true);
+        }}
+        title="Trigger Build"
+      />
+    ),
+  });
+}, [route.params.slug]);
 
   function getColorStyle(buildData: Build) {
     const status = buildData.item.status_text;
@@ -174,16 +175,18 @@ const BuildListView = ({navigation, route}) => {
             }
           }}
           onEndReachedThreshold={0.1}
-          ListFooterComponent={() => {
-            <Text> "Footer Loader"</Text>;
-          }}
+          ListFooterComponent={() => (
+            <View>
+              <Text></Text>
+            </View>
+          )}
           keyExtractor={(item: Build, _) => item.slug}
-          renderItem={(buildData: Build) => {
-            const colorStyle = getColorStyle(buildData);
-            const colorStyleSideLine = getColorStyleSideLine(buildData);
+          renderItem={({ item: buildData }: { item: Build }) => {
+            const colorStyle = getColorStyle({ item: buildData });
+            const colorStyleSideLine = getColorStyleSideLine({ item: buildData });
             return (
               <BuildItem
-                buildData={buildData}
+                buildData={{ item: buildData }}
                 navigation={navigation}
                 route={route}
                 colorStyle={colorStyle}

@@ -20,7 +20,7 @@ const LoginForm = ({navigation, route}) => {
 
 
   function getAPIData(apiToken: string) {
-    const apiService = new ApiService(API_CONFIG.BASE_URL);
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
     const url = API_CONFIG.endpoints.apps.list(null);
     setSpinner(true);
 
