@@ -1,31 +1,39 @@
 import React from 'react';
-import {StyleSheet, Text, TextStyle, View, ViewStyle} from 'react-native';
-import type {BuildItemData} from './BuildItem';
+import {StyleSheet, Text, TextStyle, View} from 'react-native';
+import {Build} from '../../API Calls/BuildModel';
+import {AppIcon} from '../Components/AppIcon';
+import {Theme} from '../Theme/useTheme';
 
 interface BuildBranchProps {
-  buildData: BuildItemData;
-  colorStyle: ViewStyle | TextStyle; // If it's a style object
-  colorStyleSideLine: ViewStyle | TextStyle;
+  build: Build;
+  theme: Theme;
 }
 
-const BuildBranch: React.FC<BuildBranchProps> = ({
-  buildData,
-  colorStyle,
-  colorStyleSideLine,
-}) => {
+/**
+ * Branch line of a build card: the `branch` symbol followed by the branch name
+ * rendered mono. Theme-only; no color literals.
+ */
+const BuildBranch: React.FC<BuildBranchProps> = ({build, theme}) => {
+  const {colors, type, spacing} = theme;
+  const labelColor = colors.label;
+  const branchStyle: TextStyle = {
+    fontFamily: type.mono,
+    fontSize: type.subheadline.fontSize,
+    color: colors.label,
+    marginLeft: spacing.spacing.xs,
+    flexShrink: 1,
+  };
+
   return (
-    <View style={[styleSheet.buildView, colorStyle]}>
-      <Text style={styleSheet.branch}>{buildData.item.branch}</Text>
-      <View style={styleSheet.buildStatusView}>
-        <Text
-          style={[
-            styleSheet.buildStatus,
-            colorStyleSideLine,
-            styleSheet.buildStatusTextView,
-          ]}>
-          {buildData.item.status_text}
-        </Text>
-      </View>
+    <View style={styleSheet.row}>
+      <AppIcon
+        name="branch"
+        size={14}
+        color={typeof labelColor === 'string' ? labelColor : undefined}
+      />
+      <Text style={branchStyle} numberOfLines={1} allowFontScaling>
+        {build.branch}
+      </Text>
     </View>
   );
 };
@@ -33,31 +41,8 @@ const BuildBranch: React.FC<BuildBranchProps> = ({
 export default BuildBranch;
 
 const styleSheet = StyleSheet.create({
-  buildView: {
+  row: {
     flexDirection: 'row',
-  },
-  buildStatusView: {
-    flexDirection: 'column',
-    justifyContent: 'flex-end',
-  },
-  branch: {
-    paddingVertical: 5,
-    paddingHorizontal: 5,
-    textAlign: 'left',
-    flexDirection: 'column',
-    color: 'black',
-    flex: 1,
-    fontWeight: '600',
-  },
-  buildStatus: {
-    paddingVertical: 5,
-    paddingHorizontal: 5,
-    textAlign: 'left',
-    flexDirection: 'column',
-    color: 'black',
-  },
-  buildStatusTextView: {
-    width: 70,
-    textAlign: 'center',
+    alignItems: 'center',
   },
 });

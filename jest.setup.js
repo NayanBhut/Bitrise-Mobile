@@ -56,6 +56,20 @@ jest.mock('react-native-nitro-sfsymbols', () => {
   };
 });
 
+// react-native-gesture-handler's ReanimatedSwipeable imports react-native-worklets
+// at module load, which touches native bindings and throws on Node. Replace the
+// swipeable with a lightweight component that forwards its children so rows that
+// use it can be unit-tested without the native worklets runtime.
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
+  const React = require('react');
+  const {View} = require('react-native');
+  const ReanimatedSwipeable = React.forwardRef((props, ref) =>
+    React.createElement(View, {ref}, props.children),
+  );
+  ReanimatedSwipeable.displayName = 'ReanimatedSwipeable';
+  return {__esModule: true, default: ReanimatedSwipeable};
+});
+
 // react-native-haptic-feedback talks to native Core Haptics / Vibration.
 // Mock trigger as a spy while keeping the real HapticFeedbackTypes enum values
 // so buttons can reference impactLight etc. and tests can assert the call.

@@ -48,6 +48,15 @@ const DESCRIPTORS: Record<BuildState, StatusDescriptor> = {
   },
 };
 
+/**
+ * Human-readable label for a build state, matching what {@link StatusBadge}
+ * renders. Exposed so callers (e.g. combined accessibility labels) can speak
+ * the same status text the badge shows.
+ */
+export function statusLabel(state: BuildState): string {
+  return DESCRIPTORS[state]?.label ?? String(state);
+}
+
 export interface StatusBadgeProps {
   /** Build state to represent. */
   state: BuildState;

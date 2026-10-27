@@ -1,15 +1,16 @@
 import React, {useEffect, useState} from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Button,
-  Alert,
   ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+  ViewStyle,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {Build, BuildModel, BuildState} from '../API Calls/BuildModel';
+import {Build, BuildModel} from '../API Calls/BuildModel';
 import BuildItem from './BuildListViews/BuildItem';
 import BuildTriggerModal from './BuildTriggerModal/BuildTriggerModal';
 
@@ -19,59 +20,148 @@ import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
 import type {RootStackParamList} from '../App';
 import {RouteProp} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {useTheme} from './Theme/useTheme';
+import {AppIcon} from './Components/AppIcon';
+import {EmptyState} from './Components/EmptyState';
+import {ErrorState} from './Components/ErrorState';
+import {SkeletonRow} from './Components/SkeletonRow';
 
 type BuildListScreenProps = {
-  navigation: StackNavigationProp<RootStackParamList, 'BuildList'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'BuildList'>;
   route: RouteProp<RootStackParamList, 'BuildList'>;
 };
 
+/** Number of skeleton placeholder rows shown during the initial load. */
+const SKELETON_COUNT = 6;
+
+/**
+ * Header-right Trigger button. Module-scope so it is a stable component type
+ * (no unstable-nested-component warning). Icon-only with a 44pt target.
+ */
+function TriggerButton({
+  onPress,
+  color,
+  hitSlop,
+}: {
+  onPress: () => void;
+  color?: string;
+  hitSlop: {top: number; bottom: number; left: number; right: number};
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Trigger build"
+      accessibilityHint="Opens the build trigger form"
+      hitSlop={hitSlop}
+      onPress={onPress}
+      style={styleSheet.headerButton}>
+      <AppIcon name="trigger" size={22} color={color} accessibilityLabel="Trigger build" />
+    </Pressable>
+  );
+}
+
 const BuildListView = ({navigation, route}: BuildListScreenProps) => {
+  const theme = useTheme();
+  const {colors} = theme;
+
   const [getBuilds, setBuilds] = useState<BuildModel | null>(null);
   const [getSpinner, setSpinner] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
   const [isAbortVisible, setAbortVisible] = useState(true);
   const [abortBuildSlug, setAbortBuildSlug] = useState('');
 
   async function getAppBuilds(_slug: string, next: string | null) {
-  const auth: string | null = await getToken();
-  if (auth === null) {
-    return;
+    const auth: string | null = await getToken();
+    if (auth === null) {
+      return;
+    }
+
+    // Only fetch if:
+    // - It's the first load (next === null && no data)
+    // - Or it's pagination (next !== null)
+    if (next === null && (getBuilds?.data ?? []).length > 0) {
+      return; // Skip if data already exists and not paginating
+    }
+
+    setError(null);
+    setSpinner(true);
+
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
+    const url = API_CONFIG.endpoints.builds.list(_slug, next);
+
+    apiService
+      .get(url, {
+        'content-type': 'application/json',
+        Authorization: auth,
+      })
+      .then(data => {
+        setSpinner(false);
+        setHasLoaded(true);
+
+        const buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
+        const buildData: Build[] = getBuilds?.data ?? [];
+        const newPageBuilds: Build[] = buildsModel.data ?? [];
+        const totalBuilds: Build[] = [...buildData, ...newPageBuilds];
+        buildsModel.data = totalBuilds;
+
+        setBuilds(buildsModel);
+        applyTitle(buildsModel);
+      })
+      .catch(fetchError => {
+        setSpinner(false);
+        setHasLoaded(true);
+        setError(getUserFacingError(fetchError));
+      });
   }
 
-  // Only fetch if:
-  // - It's the first load (next === null && no data)
-  // - Or it's pagination (next !== null)
-  if (next === null && (getBuilds?.data ?? []).length > 0) {
-    return; // Skip if data already exists and not paginating
+  /**
+   * Pull-to-refresh / retry: fetches the first page and REPLACES the loaded
+   * data instead of concatenating. Bypasses the "already loaded" guard in
+   * {@link getAppBuilds} while leaving the next-token pagination contract
+   * untouched.
+   */
+  async function refresh() {
+    const auth: string | null = await getToken();
+    if (auth === null) {
+      return;
+    }
+
+    setRefreshing(true);
+    setError(null);
+
+    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
+    const url = API_CONFIG.endpoints.builds.list(route.params.slug, null);
+
+    apiService
+      .get(url, {
+        'content-type': 'application/json',
+        Authorization: auth,
+      })
+      .then(data => {
+        setRefreshing(false);
+        setHasLoaded(true);
+        const buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
+        setBuilds(buildsModel);
+        applyTitle(buildsModel);
+      })
+      .catch(fetchError => {
+        setRefreshing(false);
+        setHasLoaded(true);
+        setError(getUserFacingError(fetchError));
+      });
   }
 
-  setSpinner(true);
-
-  const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
-  const url = API_CONFIG.endpoints.builds.list(_slug, next);
-  
-  apiService
-    .get(url, {
-      'content-type': 'application/json',
-      Authorization: auth,
-    })
-    .then(data => {
-      setSpinner(false);
-
-      const buildsModel: BuildModel = JSON.parse(JSON.stringify(data));
-      const buildData: Build[] = getBuilds?.data ?? [];
-      const newPageBuilds: Build[] = buildsModel.data ?? [];
-      const totalBuilds: Build[] = [...buildData, ...newPageBuilds];
-      buildsModel.data = totalBuilds;
-
-      setBuilds(buildsModel);
-    })
-    .catch(error => {
-      setSpinner(false);
-      Alert.alert('Error', getUserFacingError(error));
-    });
-}
+  /** Set the native large title to the app name once the first build is known. */
+  function applyTitle(model: BuildModel | null) {
+    const title = model?.data?.[0]?.repository?.title;
+    if (typeof title === 'string' && title.length > 0) {
+      navigation.setOptions({title});
+    }
+  }
 
   async function abortBuild(buildSlug: string, reason: string) {
     const auth: string | null = await getToken();
@@ -111,113 +201,124 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
           },
         ]);
       })
-      .catch(error => {
+      .catch(abortError => {
         setSpinner(false);
         if (__DEV__) {
-          console.error('Unable to abort the build.', error);
+          console.error('Unable to abort the build.', abortError);
         }
-        Alert.alert('Error', getUserFacingError(error));
+        Alert.alert('Error', getUserFacingError(abortError));
       });
   }
 
   useEffect(() => {
-  getAppBuilds(route.params.slug, null);
-  navigation.setOptions({
-    headerRight: () => (
-      <Button
-        onPress={() => {
-          setModalVisible(true);
-        }}
-        title="Trigger Build"
-      />
-    ),
-  });
-  // Fetching is intentionally tied to the app slug. getAppBuilds closes over
-  // the latest pagination state, so adding it as a dependency would refetch
-  // forever.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [route.params.slug]);
+    getAppBuilds(route.params.slug, null);
+    const accent = colors.accent;
+    const tint = typeof accent === 'string' ? accent : undefined;
+    navigation.setOptions({
+      // eslint-disable-next-line react/no-unstable-nested-components
+      headerRight: () => (
+        <TriggerButton
+          onPress={() => setModalVisible(true)}
+          color={tint}
+          hitSlop={theme.spacing.hitSlop}
+        />
+      ),
+    });
+    // Fetching is intentionally tied to the app slug. getAppBuilds closes over
+    // the latest pagination state, so adding it as a dependency would refetch
+    // forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params.slug, colors.accent]);
 
-  function getColorStyle(buildData: {item: Build}) {
-    const status = buildData.item.status_text;
-    let backgroundColor;
-
-    switch (status) {
-      case BuildState.Success:
-      case BuildState.Abort:
-        backgroundColor = '#FFF';
-        break;
-      default:
-        backgroundColor = '#FFF';
-    }
-
-    return {backgroundColor};
+  /** Both swipe-to-abort and long-press funnel here to confirm the reason. */
+  function openAbortSheet(slug: string) {
+    setAbortBuildSlug(slug);
+    setAbortVisible(true);
   }
 
-  function getColorStyleSideLine(buildData: {item: Build}) {
-    const status = buildData.item.status_text;
+  const builds = getBuilds?.data ?? [];
+  const isInitialLoading = getSpinner && builds.length === 0 && !refreshing;
+  const hasFetchError = error != null && builds.length === 0;
+  const isEmpty = hasLoaded && !hasFetchError && !isInitialLoading && builds.length === 0;
 
-    let backgroundColor;
+  const mainBackground: ViewStyle = {backgroundColor: colors.groupedBackground};
+  const accentColor = colors.accent;
 
-    switch (status) {
-      case BuildState.Success:
-        backgroundColor = '#2a9d4c';
-        break;
-      case BuildState.Abort:
-        backgroundColor = '#b27e00';
-        break;
-      case BuildState.InProgress:
-        backgroundColor = '#9247c2';
-        break;
-      case BuildState.OnHold:
-        backgroundColor = '#7d7184';
-        break;
-      default:
-        backgroundColor = '#d72d40';
+  function renderBody() {
+    if (isInitialLoading) {
+      return (
+        <View>
+          {Array.from({length: SKELETON_COUNT}).map((_, index) => (
+            <SkeletonRow key={index} />
+          ))}
+        </View>
+      );
     }
 
-    return {backgroundColor};
+    if (hasFetchError) {
+      return (
+        <ErrorState
+          message={error as string}
+          onRetry={() => {
+            setError(null);
+            refresh();
+          }}
+          testID="builds-error-state"
+        />
+      );
+    }
+
+    if (isEmpty) {
+      return (
+        <View style={styleSheet.flex}>
+          <EmptyState
+            icon="build"
+            title="No builds yet"
+            message="Builds you trigger for this app will show up here."
+            testID="builds-empty-state"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={builds}
+        keyExtractor={(item: Build) => item.slug}
+        renderItem={({item}: {item: Build}) => (
+          <BuildItem
+            buildData={{item}}
+            navigation={navigation}
+            route={route}
+            onAbort={openAbortSheet}
+          />
+        )}
+        onEndReached={() => {
+          if ((getBuilds?.data ?? []).length > 0) {
+            getAppBuilds(route.params.slug, getBuilds?.paging.next ?? null);
+          }
+        }}
+        onEndReachedThreshold={0.1}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+        }
+        ListFooterComponent={
+          getSpinner && builds.length > 0 ? (
+            <View style={styleSheet.footerSpinner}>
+              <ActivityIndicator
+                size="small"
+                color={typeof accentColor === 'string' ? accentColor : undefined}
+              />
+            </View>
+          ) : null
+        }
+      />
+    );
   }
 
   return (
-    <SafeAreaView style={styleSheet.mainView}>
-      <View style={styleSheet.mainView}>
-        <Text style={styleSheet.textTriggerPipeline}>
-          Total Triggered : {getBuilds?.paging.total_item_count}
-        </Text>
-        <FlatList
-          data={getBuilds?.data ?? []}
-          onEndReached={() => {
-            if ((getBuilds?.data ?? []).length > 0) {
-              getAppBuilds(route.params.slug, getBuilds?.paging.next ?? null);
-            }
-          }}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={() => (
-            <View>
-              <Text></Text>
-            </View>
-          )}
-          keyExtractor={(item: Build, _) => item.slug}
-          renderItem={({ item: buildData }: { item: Build }) => {
-            const colorStyle = getColorStyle({ item: buildData });
-            const colorStyleSideLine = getColorStyleSideLine({ item: buildData });
-            return (
-              <BuildItem
-                buildData={{ item: buildData }}
-                navigation={navigation}
-                route={route}
-                colorStyle={colorStyle}
-                colorStyleSideLine={colorStyleSideLine}
-                abortBuild={slug => {
-                  setAbortBuildSlug(slug);
-                  setAbortVisible(true);
-                }}
-              />
-            );
-          }}
-        />
-      </View>
+    <SafeAreaView style={[styleSheet.flex, mainBackground]} edges={['bottom']}>
+      {renderBody()}
 
       <BuildTriggerModal
         visible={isModalVisible}
@@ -242,12 +343,6 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
           }
         }}
       />
-
-      {getSpinner ? (
-        <View style={styleSheet.spinnerView}>
-          <ActivityIndicator size="small" color="#0000ff" />
-        </View>
-      ) : null}
     </SafeAreaView>
   );
 };
@@ -255,33 +350,18 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
 export default BuildListView;
 
 const styleSheet = StyleSheet.create({
-  mainView: {
+  flex: {
     flex: 1,
   },
-  textTriggerPipeline: {
-    padding: 5,
-    color: 'black',
-  },
-  indicator: {
-    backgroundColor: 'gray',
-    margin: 10,
-  },
-  spinnerView: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    height: '100%',
-    width: '100%',
-    justifyContent: 'center',
+  footerSpinner: {
+    paddingVertical: 16,
     alignItems: 'center',
-    position: 'absolute',
   },
-  input: {
-    width: '100%',
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    paddingLeft: 10,
-    color: 'black',
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
 });

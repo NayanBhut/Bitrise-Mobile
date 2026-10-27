@@ -21,7 +21,7 @@ import {clearToken, getToken} from '../API Calls/TokenStorage';
 import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
 import type {RootStackParamList} from '../App';
-import {StackNavigationProp} from '@react-navigation/stack';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {useTheme, Theme} from './Theme/useTheme';
 import {AppIcon} from './Components/AppIcon';
@@ -35,7 +35,7 @@ interface Section {
 }
 
 type AppListScreenProps = {
-  navigation: StackNavigationProp<RootStackParamList, 'Apps List'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Apps List'>;
   route: RouteProp<RootStackParamList, 'Apps List'>;
 };
 
@@ -350,12 +350,6 @@ const AppList = ({navigation, route}: AppListScreenProps) => {
 
   // Styles derived from theme tokens.
   const mainBackground: ViewStyle = {backgroundColor: colors.groupedBackground};
-  const largeTitleStyle: TextStyle = {
-    ...type.largeTitle,
-    color: colors.label,
-    paddingHorizontal: spacing.spacing.md,
-    paddingTop: spacing.spacing.md,
-  };
   const searchStyle: TextStyle = {
     ...type.body,
     color: colors.label,
@@ -381,9 +375,6 @@ const AppList = ({navigation, route}: AppListScreenProps) => {
   };
   const listHeader = (
     <View>
-      <Text style={largeTitleStyle} allowFontScaling>
-        Apps
-      </Text>
       <TextInput
         style={searchStyle}
         value={query}
