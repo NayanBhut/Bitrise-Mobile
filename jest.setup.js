@@ -77,3 +77,50 @@ jest.mock('react-native-haptic-feedback', () => {
     HapticFeedbackTypes,
   };
 });
+
+// react-native-reanimated (and its react-native-worklets peer) load native
+// bindings at import time, which throws on Node. Replace it with a
+// self-contained mock: Animated.* primitives forward props to the RN views,
+// and the animation hooks/helpers resolve to synchronous no-ops so components
+// that drive a shimmer can be unit-tested without the native runtime.
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const {View, Text, ScrollView} = require('react-native');
+
+  const forward = Component => {
+    const Wrapped = React.forwardRef((props, ref) =>
+      React.createElement(Component, {ref, ...props}),
+    );
+    Wrapped.displayName = `Animated(${Component.displayName || Component.name || 'Component'})`;
+    return Wrapped;
+  };
+
+  const AnimatedView = forward(View);
+  const noop = () => {};
+  const easingFn = () => noop;
+  const createAnimatedComponent = Component => forward(Component);
+
+  return {
+    __esModule: true,
+    default: {
+      View: AnimatedView,
+      Text: forward(Text),
+      ScrollView: forward(ScrollView),
+      createAnimatedComponent,
+    },
+    createAnimatedComponent,
+    useSharedValue: initial => ({value: initial}),
+    useAnimatedStyle: factory => factory(),
+    withRepeat: value => value,
+    withTiming: value => value,
+    withSequence: (...values) => values[values.length - 1],
+    withDelay: (_delay, value) => value,
+    cancelAnimation: noop,
+    Easing: {
+      inOut: easingFn,
+      ease: noop,
+      linear: noop,
+      bezier: easingFn,
+    },
+  };
+});
