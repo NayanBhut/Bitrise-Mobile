@@ -1,24 +1,46 @@
 name: Generate iOS Build
+
 on:
   schedule:
-    - cron: "00 17 01 * *" # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+    - cron: '00 17 01 * *' # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ios_build:
     name: Generate iOS Simulator Build
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-      
-      - uses: maxim-lobanov/setup-xcode@v1
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
         with:
           xcode-version: latest-stable
 
+      - name: Install dependencies and audit
+        run: |
+          npm ci
+          npm audit --omit=dev --audit-level=high
+
       - name: Generate iOS Simulator Build
         run: |
-          npm install
           cd ios
           pod install
           xcodebuild \
@@ -26,12 +48,12 @@ jobs:
             -configuration Debug \
             -workspace "Bitrise.xcworkspace" \
             -scheme "Bitrise" \
-            -derivedDataPath $(pwd)
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
-      - name: Upload iOS Artifact (Optional)
-        uses: actions/upload-artifact@v4
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Bitrise-ios-build
-          path: |
-            ios/build/Bitrise/Build/Products/Debug-iphonesimulator/
-            # Adjust the path based on your actual build output location
+          path: ios/build/Build/Products/Debug-iphonesimulator/

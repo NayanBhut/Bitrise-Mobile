@@ -1,61 +1,90 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {AppsModel} from '../API Calls/AppsModel';
 import ApiService from '../API Calls/APIService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getToken, saveToken} from '../API Calls/TokenStorage';
+import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
 
-const LoginForm = ({navigation, route}) => {
+const LoginForm = ({
+  navigation,
+}: {
+  navigation: {navigate: (r: string, p: object) => void};
+}) => {
   const [token, setToken] = useState<string>('');
+  const [showToken, setShowToken] = useState(false);
   const [getSpinner, setSpinner] = useState(false);
 
+  const getAPIData = useCallback(
+    (rawToken: string) => {
+      const apiToken = rawToken.trim();
+      if (!apiToken) {
+        Alert.alert('Token required', 'Enter a Bitrise personal access token.');
+        return;
+      }
 
-  function getAPIData(apiToken: string) {
-    const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
-    const url = API_CONFIG.endpoints.apps.list(null);
-    setSpinner(true);
+      const apiService = new ApiService(
+        API_CONFIG.BASE_URL + API_CONFIG.API_VERSION,
+      );
+      const url = API_CONFIG.endpoints.apps.list(null);
+      setSpinner(true);
 
-    const response = apiService.get(url, {
-      'content-type': 'application/json',
-      Authorization: apiToken,
-    });
-    response
-      .then(data => {
-        setSpinner(false);
-        const appModel: AppsModel = JSON.parse(JSON.stringify(data));
+      const response = apiService.get(url, {
+        'content-type': 'application/json',
+        Authorization: apiToken,
+      });
+      response
+        .then(async data => {
+          setSpinner(false);
+          const appModel: AppsModel = JSON.parse(JSON.stringify(data));
 
-        try {
-          AsyncStorage.setItem('token', apiToken).then(() => {
+          try {
+            await saveToken(apiToken);
+            setToken('');
+            setShowToken(false);
             navigation.navigate('Apps List', {
               appList: appModel,
             });
-          });
-        } catch (e) {
-          // saving error
-        }
-      })
-      .catch(error => {
-        setSpinner(false);
-        Alert.alert('Error', error);
-      });
-  }
+          } catch (error) {
+            if (__DEV__) {
+              console.error('Unable to save the Bitrise token securely.', error);
+            }
+            Alert.alert(
+              'Error',
+              'Your token could not be stored securely. Please try again.',
+            );
+          }
+        })
+        .catch(error => {
+          setSpinner(false);
+          Alert.alert('Error', getUserFacingError(error));
+        });
+    },
+    [navigation],
+  );
 
   useEffect(() => {
-    AsyncStorage.getItem('token').then(savedToken => {
-      if (savedToken != null) {
+    let isMounted = true;
+
+    getToken().then(savedToken => {
+      if (isMounted && savedToken != null) {
         getAPIData(savedToken);
       }
     });
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getAPIData]);
 
   return (
     <SafeAreaView style={styles.mainView}>
@@ -63,14 +92,26 @@ const LoginForm = ({navigation, route}) => {
         <Text style={styles.tokenText}>Please add Bitrise Token</Text>
         <TextInput
           autoCapitalize="none"
-          keyboardType="email-address"
+          autoComplete="off"
+          autoCorrect={false}
+          importantForAutofill="no"
+          keyboardType="default"
           spellCheck={false}
+          secureTextEntry={!showToken}
           style={styles.input}
           placeholder="Please add token"
           placeholderTextColor="black"
+          textContentType="none"
           value={token}
           onChangeText={setToken}
         />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowToken(previous => !previous)}>
+          <Text style={styles.showTokenText}>
+            {showToken ? 'Hide token' : 'Show token'}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={() => {
             getAPIData(token);
@@ -105,6 +146,10 @@ const styles = StyleSheet.create({
   mainView: {flex: 1, flexDirection: 'column'},
   view: {padding: 10},
   tokenText: {fontSize: 20, paddingBottom: 20, color: 'black'},
+  showTokenText: {
+    color: '#007BFF',
+    paddingBottom: 12,
+  },
   buttonView: {
     backgroundColor: 'black',
     height: 40,

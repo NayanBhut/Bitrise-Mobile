@@ -1,7 +1,7 @@
 import React from 'react';
 import {TouchableOpacity, Text, StyleSheet} from 'react-native';
 
-export default function Radio({value, changeValue, text}) {
+export default function Radio({value, changeValue, text}: {value: boolean; changeValue: () => void; text: string}) {
   return (
     <TouchableOpacity style={radioStyle.btn} onPress={changeValue}>
       <Text

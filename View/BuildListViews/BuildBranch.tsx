@@ -1,9 +1,9 @@
 import React from 'react';
 import {StyleSheet, Text, TextStyle, View, ViewStyle} from 'react-native';
-import BuildItem from './BuildItem';
+import type {BuildItemData} from './BuildItem';
 
 interface BuildBranchProps {
-  buildData: BuildItem;
+  buildData: BuildItemData;
   colorStyle: ViewStyle | TextStyle; // If it's a style object
   colorStyleSideLine: ViewStyle | TextStyle;
 }

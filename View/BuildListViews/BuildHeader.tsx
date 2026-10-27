@@ -1,9 +1,9 @@
 import React from 'react';
 import {Text, Pressable, View, StyleSheet} from 'react-native';
-import BuildItem from './BuildItem';
+import type {BuildItemData} from './BuildItem';
 
 interface BuildHeaderProps {
-  buildData: BuildItem;
+  buildData: BuildItemData;
   colorStyle: any; // Replace 'any' with the actual type for style, like ViewStyle or TextStyle
   abortBuild: (slug: string) => void; // Assuming abortBuild is a function that accepts a slug and returns void
 }

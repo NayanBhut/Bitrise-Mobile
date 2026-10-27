@@ -4,36 +4,39 @@ import {
   Alert,
   Button,
   Pressable,
-  SafeAreaView,
   SectionList,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {AppsModel, Apps} from '../API Calls/AppsModel';
 import ApiService from '../API Calls/APIService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {clearToken, getToken} from '../API Calls/TokenStorage';
+import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
-
-interface NavigationProps {
-  navigate: (route: string, {}) => void;
-  goBack: () => void;
-  // Other navigation methods as needed
-}
+import type {RootStackParamList} from '../App';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RouteProp} from '@react-navigation/native';
 
 interface Section {
   title: string;
   data: Apps[];
 }
 
-const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
+type AppListScreenProps = {
+  navigation: StackNavigationProp<RootStackParamList, 'Apps List'>;
+  route: RouteProp<RootStackParamList, 'Apps List'>;
+};
+
+const AppList = ({navigation, route}: AppListScreenProps) => {
   const [dataModel, setDataModel] = useState<AppsModel | null>(null);
 
   const [getSpinner, setSpinner] = useState(false);
   const [getSectionData, setSectionData] = useState<Section[]>([]);
 
   async function getAPIData(next: string | null) {
-    const auth: string | null = await AsyncStorage.getItem('token');
+    const auth: string | null = await getToken();
     if (auth === null) {
       return;
     }
@@ -66,7 +69,7 @@ const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
       })
       .catch(error => {
         setSpinner(false);
-        Alert.alert('Error', error);
+        Alert.alert('Error', getUserFacingError(error));
       });
   }
 
@@ -105,32 +108,43 @@ const AppList = ({navigation, route}: {navigation: NavigationProps}) => {
   }
 
   useEffect(() => {
-    setDataModel(route.params.appList);
-    convertToSection(route.params.appList);
+    const params = route.params as { appList?: AppsModel } | undefined;
+    if (params?.appList) {
+      setDataModel(params.appList);
+      convertToSection(params.appList);
+    }
     navigation.setOptions({
       // eslint-disable-next-line react/no-unstable-nested-components
       headerRight: () => (
         <Button
           onPress={() => {
-            AsyncStorage.clear().then(() => {
-              navigation.goBack();
-            });
+            clearToken()
+              .then(() => {
+                navigation.goBack();
+              })
+              .catch(error => {
+                if (__DEV__) {
+                  console.error('Unable to clear the Bitrise token.', error);
+                }
+                Alert.alert(
+                  'Error',
+                  'Your token could not be removed. Please try again.',
+                );
+              });
           }}
           title="Log Out"
         />
       ),
       headerLeft: () => null,
     });
-  }, [route.params]);
+  }, [navigation, route.params]);
 
   // Render each item in a section
   const renderItem = ({item}: {item: Apps}) => (
     <Pressable
       onPress={() => {
-        console.log(`Pressed ${item.title}`);
         navigation.navigate('BuildList', {
           slug: item.slug,
-          appName: item.title,
         });
       }}>
       <View style={styleSheet.appBGView}>

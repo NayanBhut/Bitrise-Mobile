@@ -2,22 +2,31 @@ import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   StyleSheet,
   FlatList,
   Button,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {Build, BuildModel, BuildState} from '../API Calls/BuildModel';
 import BuildItem from './BuildListViews/BuildItem';
 import BuildTriggerModal from './BuildTriggerModal/BuildTriggerModal';
 
 import ApiService from '../API Calls/APIService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getToken} from '../API Calls/TokenStorage';
+import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
+import type {RootStackParamList} from '../App';
+import {RouteProp} from '@react-navigation/native';
+import {StackNavigationProp} from '@react-navigation/stack';
 
-const BuildListView = ({navigation, route}) => {
+type BuildListScreenProps = {
+  navigation: StackNavigationProp<RootStackParamList, 'BuildList'>;
+  route: RouteProp<RootStackParamList, 'BuildList'>;
+};
+
+const BuildListView = ({navigation, route}: BuildListScreenProps) => {
   const [getBuilds, setBuilds] = useState<BuildModel | null>(null);
   const [getSpinner, setSpinner] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
@@ -25,7 +34,7 @@ const BuildListView = ({navigation, route}) => {
   const [abortBuildSlug, setAbortBuildSlug] = useState('');
 
   async function getAppBuilds(_slug: string, next: string | null) {
-  const auth: string | null = await AsyncStorage.getItem('token');
+  const auth: string | null = await getToken();
   if (auth === null) {
     return;
   }
@@ -60,12 +69,12 @@ const BuildListView = ({navigation, route}) => {
     })
     .catch(error => {
       setSpinner(false);
-      Alert.alert('Error', error.message || 'Failed to fetch builds');
+      Alert.alert('Error', getUserFacingError(error));
     });
 }
 
   async function abortBuild(buildSlug: string, reason: string) {
-    const auth: string | null = await AsyncStorage.getItem('token');
+    const auth: string | null = await getToken();
     if (auth === null) {
       return;
     }
@@ -89,7 +98,9 @@ const BuildListView = ({navigation, route}) => {
         setSpinner(false);
         var result = JSON.parse(JSON.stringify(response));
         const message =
-          result.status === 'ok' ? 'Build Aborted' : result.message;
+          result.status === 'ok'
+            ? 'Build Aborted'
+            : 'The build could not be aborted. Please try again.';
         Alert.alert('Abort', message, [
           {
             text: 'Ok',
@@ -102,7 +113,10 @@ const BuildListView = ({navigation, route}) => {
       })
       .catch(error => {
         setSpinner(false);
-        console.error(error);
+        if (__DEV__) {
+          console.error('Unable to abort the build.', error);
+        }
+        Alert.alert('Error', getUserFacingError(error));
       });
   }
 
@@ -118,9 +132,13 @@ const BuildListView = ({navigation, route}) => {
       />
     ),
   });
+  // Fetching is intentionally tied to the app slug. getAppBuilds closes over
+  // the latest pagination state, so adding it as a dependency would refetch
+  // forever.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [route.params.slug]);
 
-  function getColorStyle(buildData: Build) {
+  function getColorStyle(buildData: {item: Build}) {
     const status = buildData.item.status_text;
     let backgroundColor;
 
@@ -136,7 +154,7 @@ const BuildListView = ({navigation, route}) => {
     return {backgroundColor};
   }
 
-  function getColorStyleSideLine(buildData: Build) {
+  function getColorStyleSideLine(buildData: {item: Build}) {
     const status = buildData.item.status_text;
 
     let backgroundColor;

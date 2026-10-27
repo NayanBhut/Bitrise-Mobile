@@ -7,43 +7,46 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "audit": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-masked-view/masked-view": "^0.3.2",
-    "@react-native/new-app-screen": "0.82.1",
-    "@react-navigation/stack": "^7.6.8",
-    "react": "19.1.1",
-    "react-native": "0.82.1",
-    "react-native-ansi-view": "^0.1.3",
-    "react-native-gesture-handler": "^2.29.1",
-    "react-native-reanimated": "^4.1.5",
-    "react-native-safe-area-context": "^5.5.2",
-    "react-native-screens": "^4.18.0",
-    "react-native-worklets": "^0.6.1"
+    "@react-native-async-storage/async-storage": "3.1.1",
+    "@react-native-masked-view/masked-view": "0.3.2",
+    "@react-navigation/native": "7.5.1",
+    "@react-navigation/stack": "7.12.1",
+    "anser": "2.3.3",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-gesture-handler": "3.4.0",
+    "react-native-keychain": "10.0.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "5.10.1",
+    "react-native-screens": "4.30.0",
+    "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.28.4",
-    "@react-native-community/cli": "20.0.0",
-    "@react-native-community/cli-platform-android": "20.0.0",
-    "@react-native-community/cli-platform-ios": "20.0.0",
-    "@react-native/babel-preset": "0.82.1",
-    "@react-native/eslint-config": "0.82.1",
-    "@react-native/metro-config": "0.82.1",
-    "@react-native/typescript-config": "0.82.1",
+    "@react-native-community/cli": "20.2.0",
+    "@react-native-community/cli-platform-android": "20.2.0",
+    "@react-native-community/cli-platform-ios": "20.2.0",
+    "@react-native/babel-preset": "0.88.0",
+    "@react-native/eslint-config": "0.88.0",
+    "@react-native/jest-preset": "0.88.0",
+    "@react-native/metro-config": "0.88.0",
+    "@react-native/typescript-config": "0.88.0",
     "@types/jest": "^29.5.13",
-    "@types/react": "^19.1.1",
+    "@types/react": "^19.2.0",
     "@types/react-test-renderer": "^19.1.0",
-    "eslint": "^8.19.0",
-    "jest": "^29.6.3",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
     "prettier": "2.8.8",
-    "react-test-renderer": "19.1.1",
-    "typescript": "^5.8.3"
+    "react-test-renderer": "19.3.0",
+    "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">= 22.11.0"
   }
 }

@@ -1,3 +1,5 @@
+import {ApiError} from './ErrorUtils';
+
 interface Headers {
   [key: string]: string;
 }
@@ -7,7 +9,6 @@ class ApiService {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
-    console.log(this.baseURL);
   }
 
   // Common method to handle API requests
@@ -17,7 +18,6 @@ class ApiService {
     body: Record<string, any> | null = null,
     customHeaders: Headers = {},
   ): Promise<T> {
-    console.log(this.baseURL + endpoint);
     const headers: Headers = {
       'Content-Type': 'application/json',
       ...customHeaders, // Allow custom headers for specific requests
@@ -40,7 +40,14 @@ class ApiService {
       // Check if the response is ok (status code 200-299)
       if (!response.ok) {
         const errorData = await this.tryParseJson(response);
-        throw new Error(errorData?.message || 'API request failed');
+        const serverMessage =
+          typeof errorData?.message === 'string'
+            ? errorData.message.slice(0, 300)
+            : '';
+        throw new ApiError(
+          response.status,
+          serverMessage || 'The request could not be completed.',
+        );
       }
 
       // Try to parse the response as JSON if it's a JSON response
@@ -52,8 +59,10 @@ class ApiService {
         const text = await response.text();
         return text as unknown as T; // You can adjust this based on your expected return type
       }
-    } catch (error: any) {
-      console.error(`API call failed: ${error.message}`);
+    } catch (error) {
+      if (__DEV__) {
+        console.error('API request failed.', error);
+      }
       throw error; // Re-throw the error for the caller to handle
     }
   }
@@ -62,7 +71,7 @@ class ApiService {
   private async tryParseJson(response: Response): Promise<any> {
     try {
       return await response.json();
-    } catch (e) {
+    } catch {
       return {}; // Return an empty object or handle this error gracefully
     }
   }

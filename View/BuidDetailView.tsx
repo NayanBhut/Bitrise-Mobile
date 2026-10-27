@@ -2,29 +2,32 @@ import React, {useEffect, useRef, useState} from 'react';
 import {ActivityIndicator, Alert, Button, View} from 'react-native';
 import {StyleSheet} from 'react-native';
 import {BuildDetailModel} from '../API Calls/BuildDetailModel';
-import {AnsiComponent} from 'react-native-ansi-view';
+import {AnsiText} from './AnsiText';
 
 import {ScrollView} from 'react-native-gesture-handler';
 import {LogChunks} from '../API Calls/BuildDetailModel';
 import ApiService from '../API Calls/APIService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getToken} from '../API Calls/TokenStorage';
+import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
 
-const BuildDetailView = ({navigation, route}) => {
+const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: object) => void}; route: {params: {appSlug: string; buildModel: {slug: string}}}}) => {
   const [getBuildData, setBuildData] = useState<BuildDetailModel | null>(null);
 
   const [loader, setLoader] = useState<Boolean>(false);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   function getLogs(_url: string) {
     setLoader(true);
     const requestOptions: RequestInit = {
       method: 'GET',
-      redirect: 'follow',
     };
 
     fetch(_url, requestOptions)
       .then(response => {
+        if (!response.ok) {
+          throw new Error('The full log request failed.');
+        }
         return response.text();
       })
       .then(result => {
@@ -42,12 +45,12 @@ const BuildDetailView = ({navigation, route}) => {
       })
       .catch(error => {
         setLoader(false);
-        Alert.alert('Error', error);
+        Alert.alert('Error', getUserFacingError(error));
       });
   }
 
   async function getBuildDetails(_appSlug: string, _buildSlug: string) {
-    const auth: string | null = await AsyncStorage.getItem('token');
+    const auth: string | null = await getToken();
     if (auth === null) {
       return;
     }
@@ -73,7 +76,7 @@ const BuildDetailView = ({navigation, route}) => {
       })
       .catch(error => {
         setLoader(false);
-        Alert.alert('Error', error);
+        Alert.alert('Error', getUserFacingError(error));
       });
   }
 
@@ -91,13 +94,16 @@ const BuildDetailView = ({navigation, route}) => {
             if (getBuildData?.expiring_raw_log_url != null) {
               getLogs(getBuildData?.expiring_raw_log_url.toString()); // Use getFullLogURL directly
             } else {
-              console.log('Full log URL is not available yet.');
+              Alert.alert('Full Log', 'The full log is not available yet.');
             }
           }}
           title="Full Log"
         />
       ),
     });
+  // The header action needs the latest build/log URL. Re-running this effect
+  // whenever getBuildData changes is intentional.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getBuildData]); // This effect will run whenever getBuildData changes
 
   return (
@@ -117,12 +123,10 @@ const BuildDetailView = ({navigation, route}) => {
           <View style={styles.container}>
             {(getBuildData?.log_chunks ?? []).map((line, index) => (
               <View style={styles.ansiSuperView}>
-                <AnsiComponent
+                <AnsiText
                   textStyle={styles.defaultText}
                   containerStyle={styles.line}
-                  ansi={(
-                    getBuildData?.log_chunks[index].chunk ?? ''
-                  ).toString()}
+                  ansi={(getBuildData?.log_chunks[index].chunk ?? '').toString()}
                   key={`k-${index}`}
                 />
               </View>

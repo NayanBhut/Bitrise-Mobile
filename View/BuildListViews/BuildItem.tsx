@@ -1,21 +1,12 @@
 import React from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import {StackNavigationProp} from '@react-navigation/stack';
 import BuildHeader from './BuildHeader'; // Import BuildHeader component
 import BuildBranch from './BuildBranch'; // Import BuildBranch component
+import type {RootStackParamList} from '../../App';
+import {StackNavigationProp} from '@react-navigation/stack';
+import {RouteProp} from '@react-navigation/native';
 
-// Define the interface for the props of BuildItem
-interface BuildItemProps {
-  buildData: BuildItem; // Define BuildItem type for buildData
-  navigation: BuildItemNavigationProp; // Navigation prop type
-  route: {params: BuildItemScreenParams}; // Route params type
-  colorStyle: any; // You can replace 'any' with ViewStyle or TextStyle for better type safety
-  colorStyleSideLine: any; // Same for colorStyleSideLine
-  abortBuild: (slug: string) => void; // abortBuild function type
-}
-
-// Define BuildItem type (structure of the build data)
-interface BuildItem {
+export interface BuildItemData {
   item: {
     triggered_workflow: string;
     finished_at: string | null;
@@ -25,13 +16,15 @@ interface BuildItem {
   };
 }
 
-// Define BuildItemScreenParams type for route params
-interface BuildItemScreenParams {
-  slug: string;
+// Define the interface for the props of BuildItem
+interface BuildItemProps {
+  buildData: BuildItemData; // Define BuildItem type for buildData
+  navigation: StackNavigationProp<RootStackParamList, 'BuildList'>; // Navigation prop type
+  route: RouteProp<RootStackParamList, 'BuildList'>; // Route params type
+  colorStyle: any; // You can replace 'any' with ViewStyle or TextStyle for better type safety
+  colorStyleSideLine: any; // Same for colorStyleSideLine
+  abortBuild: (slug: string) => void; // abortBuild function type
 }
-
-// Define navigation type using StackNavigationProp
-type BuildItemNavigationProp = StackNavigationProp<any, 'BuildDetailView'>;
 
 // Main BuildItem component
 const BuildItem: React.FC<BuildItemProps> = ({
@@ -46,7 +39,6 @@ const BuildItem: React.FC<BuildItemProps> = ({
     <Pressable
       onPress={() => {
         navigation.navigate('BuildDetailView', {
-          buildSlug: buildData.item.slug,
           appSlug: route.params.slug,
           buildModel: buildData.item,
         });

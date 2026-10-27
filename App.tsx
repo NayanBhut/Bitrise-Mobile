@@ -1,27 +1,34 @@
 import React from 'react';
-import {Button} from 'react-native';
+import {StyleSheet} from 'react-native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import AppList from './View/AppList';
-import {createStackNavigator, StackNavigationProp} from '@react-navigation/stack';
+import {createStackNavigator} from '@react-navigation/stack';
 import {NavigationContainer} from '@react-navigation/native';
 import BuildListView from './View/BuildLists';
 import BuildDetailView from './View/BuidDetailView';
 import LoginForm from './View/TokenForm';
+import type {AppsModel} from './API Calls/AppsModel';
 
 // Define types for your navigation stack
-type RootStackParamList = {
+export type RootStackParamList = {
   LoginForm: undefined;
-  'Apps List': undefined;
-  BuildList: undefined;
-  BuildDetailView: undefined;
+  'Apps List': {appList: AppsModel};
+  BuildList: {slug: string};
+  BuildDetailView: {appSlug: string; buildModel: {slug: string}};
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 function App(): React.JSX.Element {
   return (
-    <NavigationContainer>
-      <MyStack />
-    </NavigationContainer>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          <MyStack />
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -43,19 +50,19 @@ function MyStack() {
       <Stack.Screen
         name="BuildList"
         component={BuildListView}
-        options={{
-          headerRight: () => <Button title="Trigger Build" onPress={() => {}} />,
-        }}
+        initialParams={{slug: ''}}
       />
       <Stack.Screen
         name="BuildDetailView"
         component={BuildDetailView}
-        options={{
-          headerRight: () => <Button title="Get Full log" onPress={() => {}} />,
-        }}
+        initialParams={{appSlug: '', buildModel: {slug: ''}}}
       />
     </Stack.Navigator>
   );
 }
 
 export default App;
+
+const styles = StyleSheet.create({
+  root: {flex: 1},
+});

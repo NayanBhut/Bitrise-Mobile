@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   Modal,
   View,
@@ -11,7 +11,8 @@ import {
   Alert,
 } from 'react-native';
 import ApiService from '../../API Calls/APIService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {getToken} from '../../API Calls/TokenStorage';
+import {getUserFacingError} from '../../API Calls/ErrorUtils';
 import API_CONFIG from '../APIConstants/APIConstants';
 
 export interface CustomKeyModel {
@@ -36,6 +37,24 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
   const [branchName, setBranchName] = useState('');
   const [workFlowValue, setWorkFlowValue] = useState('');
   const [abortReason, setAbortReason] = useState('');
+  const [revealedKeys, setRevealedKeys] = useState<Record<string, boolean>>({});
+  const wasVisible = useRef(false);
+
+  // Keep secrets out of component state once the modal is closed.
+  useEffect(() => {
+    const isVisible = props.visible || props.isAbortVisible;
+    if (wasVisible.current && !isVisible) {
+      setData([]);
+      setKeyName('');
+      setKeyValue('');
+      setEditingItem(null);
+      setBranchName('');
+      setWorkFlowValue('');
+      setAbortReason('');
+      setRevealedKeys({});
+    }
+    wasVisible.current = isVisible;
+  }, [props.visible, props.isAbortVisible]);
 
   // Add new data
   const addData = () => {
@@ -84,7 +103,7 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
   };
 
   async function triggerBuid() {
-    const auth: string | null = await AsyncStorage.getItem('token');
+    const auth: string | null = await getToken();
     if (auth === null) {
       return;
     }
@@ -96,22 +115,6 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
         is_expand: true,
       };
     });
-
-    const myHeaders = new Headers();
-    myHeaders.append('accept', 'application/json');
-    myHeaders.append('Authorization', auth);
-    myHeaders.append('Content-Type', 'application/json');
-
-    // const raw = JSON.stringify({
-    //   hook_info: {
-    //     type: 'bitrise',
-    //   },
-    //   build_params: {
-    //     branch: branchName,
-    //     workflow_id: workFlowValue,
-    //     environments: arrEnvData,
-    //   },
-    // });
 
     const objTrigger = {
       hook_info: {
@@ -134,7 +137,9 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
       .then(response => {
         var result = JSON.parse(JSON.stringify(response));
         const message =
-          result.status === 'error' ? result.message : 'Build Triggered';
+          result.status === 'error'
+            ? 'The build could not be triggered. Check the branch, workflow, and environment values.'
+            : 'Build Triggered';
         Alert.alert('Build', message, [
           {
             text: 'OK',
@@ -145,7 +150,7 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
         ]);
       })
       .catch(error => {
-        Alert.alert('Error', error);
+        Alert.alert('Error', getUserFacingError(error));
       });
   }
 
@@ -227,9 +232,15 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
                 onChangeText={setKeyName}
               />
               <TextInput
+                autoCapitalize="none"
+                autoComplete="off"
+                autoCorrect={false}
+                importantForAutofill="no"
+                secureTextEntry
                 style={styles.input}
                 placeholder="Enter Key Value"
                 placeholderTextColor="black"
+                textContentType="none"
                 value={keyValue}
                 onChangeText={setKeyValue}
               />
@@ -247,10 +258,23 @@ const BuildTriggerModal = (props: BuildTriggerModalProps) => {
                 style={styles.styleFlatList}
                 renderItem={({item}) => (
                   <View style={styles.listItem}>
-                    <Text style={styles.itemText}>
-                      {item.keyName}: {item.keyValue}
+                    <Text style={styles.itemText} numberOfLines={1}>
+                      {item.keyName}:{' '}
+                      {revealedKeys[item.id] ? item.keyValue : '••••••••'}
                     </Text>
                     <View style={styles.listItemActions}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setRevealedKeys(previous => ({
+                            ...previous,
+                            [item.id]: !previous[item.id],
+                          }))
+                        }
+                        style={styles.revealButton}>
+                        <Text style={styles.revealButtonText}>
+                          {revealedKeys[item.id] ? 'Hide' : 'Show'}
+                        </Text>
+                      </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => editData(item)}
                         style={styles.editButton}>
@@ -339,10 +363,22 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 16,
     color: 'black',
+    flexShrink: 1,
+    marginRight: 8,
   },
   listItemActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  revealButton: {
+    marginLeft: 10,
+    padding: 5,
+    backgroundColor: '#6c757d',
+    borderRadius: 5,
+  },
+  revealButtonText: {
+    color: 'white',
+    fontSize: 14,
   },
   editButton: {
     marginLeft: 10,
