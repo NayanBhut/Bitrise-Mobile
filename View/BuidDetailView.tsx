@@ -1,24 +1,155 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Alert, Button, View} from 'react-native';
-import {StyleSheet} from 'react-native';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextStyle,
+  View,
+  ViewStyle,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {BuildDetailModel} from '../API Calls/BuildDetailModel';
 import {AnsiText} from './AnsiText';
 
-import {ScrollView} from 'react-native-gesture-handler';
 import {LogChunks} from '../API Calls/BuildDetailModel';
+import {Build, BuildState} from '../API Calls/BuildModel';
 import ApiService from '../API Calls/APIService';
 import {getToken} from '../API Calls/TokenStorage';
 import {getUserFacingError} from '../API Calls/ErrorUtils';
 import API_CONFIG from './APIConstants/APIConstants';
+import {useTheme} from './Theme/useTheme';
+import {AppIcon} from './Components/AppIcon';
+import {SectionCard} from './Components/SectionCard';
+import {StatusBadge} from './Components/StatusBadge';
+import {EmptyState} from './Components/EmptyState';
+import {ErrorState} from './Components/ErrorState';
+import {relativeTime, formatDuration} from './BuildListViews/buildTime';
 
-const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: object) => void}; route: {params: {appSlug: string; buildModel: {slug: string}}}}) => {
+/**
+ * The runtime object navigated here is a full {@link Build}, even though the
+ * App.tsx route type only declares `{slug}` (out of scope to widen). Read the
+ * summary fields defensively via this partial shape.
+ */
+type RouteBuild = Partial<Build> & {slug: string};
+
+/** Distance (pt) from the bottom within which we consider the log "at bottom". */
+const BOTTOM_THRESHOLD = 24;
+
+/**
+ * Floating "jump to bottom" affordance. It fades in on appearance when motion
+ * is allowed and renders statically (but fully functional) under Reduce Motion.
+ */
+function JumpToBottomButton({
+  backgroundColor,
+  iconColor,
+  reduceMotion,
+  onPress,
+}: {
+  backgroundColor: ViewStyle['backgroundColor'];
+  iconColor?: string;
+  reduceMotion: boolean;
+  onPress: () => void;
+}) {
+  // Start transparent so the button can fade in; hooks run unconditionally.
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  const animatedStyle = useAnimatedStyle(() => ({opacity: opacity.value}));
+
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.value = 1;
+      return;
+    }
+    opacity.value = withTiming(1, {duration: 200});
+  }, [reduceMotion, opacity]);
+
+  const button = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Jump to bottom"
+      accessibilityHint="Scrolls to the latest log output"
+      testID="jump-to-bottom"
+      onPress={onPress}
+      style={[styles.jumpButton, {backgroundColor}]}>
+      <View style={styles.jumpIcon}>
+        <AppIcon
+          name="chevron"
+          size={22}
+          color={iconColor}
+          accessibilityLabel="Jump to bottom"
+        />
+      </View>
+    </Pressable>
+  );
+
+  if (reduceMotion) {
+    return <View style={styles.jumpContainer}>{button}</View>;
+  }
+
+  return (
+    <Animated.View style={[styles.jumpContainer, animatedStyle]}>
+      {button}
+    </Animated.View>
+  );
+}
+
+/** A single virtualized log line with a stable identity. */
+type LogLine = {
+  /** Stable key: line index combined with content so reused rows stay keyed. */
+  id: string;
+  /** The raw (possibly ANSI-escaped) text for this line. */
+  text: string;
+};
+
+/**
+ * Memoized log-line row. Wrapping in `React.memo` keeps each line's ANSI
+ * parsing from re-running on unrelated parent re-renders; `AnsiText` memoizes
+ * the parse per `ansi` string internally.
+ */
+const LogRow = React.memo(function LogRowItem({
+  text,
+  textStyle,
+}: {
+  text: string;
+  textStyle: TextStyle;
+}) {
+  return (
+    <AnsiText
+      textStyle={textStyle}
+      containerStyle={textStyle}
+      selectable
+      ansi={text}
+    />
+  );
+});
+
+const BuildDetailView = ({
+  navigation,
+  route,
+}: {
+  navigation: {setOptions: (opts: object) => void};
+  route: {params: {appSlug: string; buildModel: RouteBuild}};
+}) => {
+  const {colors, type, spacing, reduceMotion} = useTheme();
+
   const [getBuildData, setBuildData] = useState<BuildDetailModel | null>(null);
+  const [loader, setLoader] = useState<boolean>(false);
+  const [fullLogLoading, setFullLogLoading] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [atBottom, setAtBottom] = useState<boolean>(true);
 
-  const [loader, setLoader] = useState<Boolean>(false);
-  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const logListRef = useRef<FlatList<LogLine>>(null);
+
+  const buildModel = route.params.buildModel;
 
   function getLogs(_url: string) {
-    setLoader(true);
+    setFullLogLoading(true);
     const requestOptions: RequestInit = {
       method: 'GET',
     };
@@ -41,10 +172,10 @@ const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: o
           log_chunks: arrChunks,
           expiring_raw_log_url: getBuildData?.expiring_raw_log_url ?? '',
         }));
-        setLoader(false);
+        setFullLogLoading(false);
       })
       .catch(error => {
-        setLoader(false);
+        setFullLogLoading(false);
         Alert.alert('Error', getUserFacingError(error));
       });
   }
@@ -55,6 +186,7 @@ const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: o
       return;
     }
 
+    setErrorMsg(null);
     setLoader(true);
 
     const apiService = new ApiService(API_CONFIG.BASE_URL + API_CONFIG.API_VERSION);
@@ -76,7 +208,7 @@ const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: o
       })
       .catch(error => {
         setLoader(false);
-        Alert.alert('Error', getUserFacingError(error));
+        setErrorMsg(getUserFacingError(error));
       });
   }
 
@@ -84,77 +216,291 @@ const BuildDetailView = ({navigation, route}: {navigation: {setOptions: (opts: o
     getBuildDetails(route.params.appSlug, route.params.buildModel.slug);
   }, [route.params.appSlug, route.params.buildModel.slug]);
 
-  // Log when getBuildData is updated
+  // Wire the header "Full Log" action. The effect re-runs whenever the build
+  // data or loading state changes so the button reflects the latest log URL
+  // and shows progress while fetching.
   useEffect(() => {
+    const accent = colors.accent;
+    const tint = typeof accent === 'string' ? accent : undefined;
     navigation.setOptions({
       // eslint-disable-next-line react/no-unstable-nested-components
-      headerRight: () => (
-        <Button
-          onPress={() => {
-            if (getBuildData?.expiring_raw_log_url != null) {
-              getLogs(getBuildData?.expiring_raw_log_url.toString()); // Use getFullLogURL directly
-            } else {
-              Alert.alert('Full Log', 'The full log is not available yet.');
-            }
-          }}
-          title="Full Log"
-        />
-      ),
+      headerRight: () =>
+        fullLogLoading ? (
+          <ActivityIndicator size="small" color={tint} />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Load full log"
+            accessibilityHint="Fetches the complete build log"
+            hitSlop={spacing.hitSlop}
+            style={styles.headerButton}
+            onPress={() => {
+              if (getBuildData?.expiring_raw_log_url != null) {
+                getLogs(getBuildData?.expiring_raw_log_url.toString());
+              } else {
+                Alert.alert('Full Log', 'The full log is not available yet.');
+              }
+            }}>
+            <AppIcon
+              name="logs"
+              size={22}
+              color={tint}
+              accessibilityLabel="Load full log"
+            />
+          </Pressable>
+        ),
     });
-  // The header action needs the latest build/log URL. Re-running this effect
-  // whenever getBuildData changes is intentional.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getBuildData]); // This effect will run whenever getBuildData changes
+    // The header action needs the latest build/log URL and loading state.
+    // Re-running this effect whenever they change is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getBuildData, fullLogLoading, colors.accent]);
+
+  const logChunks = useMemo(
+    () => getBuildData?.log_chunks ?? [],
+    [getBuildData?.log_chunks],
+  );
+
+  // Build stable-keyed log lines for the virtualized list. Keying on index +
+  // content keeps reconciliation stable even though logs are append-only.
+  const logLines: LogLine[] = useMemo(
+    () =>
+      logChunks.map((line, index) => {
+        const text = (line.chunk ?? '').toString();
+        return {id: `${index}-${text.length}`, text};
+      }),
+    [logChunks],
+  );
+
+  const accentColor = colors.accent;
+  const accentString = typeof accentColor === 'string' ? accentColor : undefined;
+  const onFill = colors.onFill;
+  const onFillString = typeof onFill === 'string' ? onFill : undefined;
+
+  function onScroll(event: {
+    nativeEvent: {
+      contentSize: {height: number};
+      layoutMeasurement: {height: number};
+      contentOffset: {y: number};
+    };
+  }) {
+    const {contentSize, layoutMeasurement, contentOffset} = event.nativeEvent;
+    const distanceFromBottom =
+      contentSize.height - (layoutMeasurement.height + contentOffset.y);
+    setAtBottom(distanceFromBottom < BOTTOM_THRESHOLD);
+  }
+
+  function renderSummaryCard() {
+    const status = buildModel.status_text;
+    const buildNumber = buildModel.build_number;
+    const branch = buildModel.branch;
+    const workflow = buildModel.triggered_workflow;
+    const started = relativeTime(buildModel.triggered_at);
+    const duration = formatDuration(
+      buildModel.started_on_worker_at,
+      buildModel.finished_at,
+    );
+
+    const labelStyle = [type.footnote, {color: colors.secondaryLabel}];
+    const valueStyle = [type.subheadline, {color: colors.label}];
+    const monoValueStyle = [
+      type.subheadline,
+      {color: colors.label, fontFamily: type.mono},
+    ];
+    const rowStyle: ViewStyle = {marginBottom: spacing.spacing.sm};
+
+    return (
+      <SectionCard title="BUILD" testID="build-detail-summary">
+        {Object.values(BuildState).includes(status as BuildState) ? (
+          <View style={rowStyle}>
+            <StatusBadge state={status as BuildState} />
+          </View>
+        ) : null}
+
+        {buildNumber != null ? (
+          <View style={rowStyle} accessible accessibilityLabel={`Build number ${buildNumber}`}>
+            <Text style={labelStyle}>Build</Text>
+            <Text style={monoValueStyle}>{`#${buildNumber}`}</Text>
+          </View>
+        ) : null}
+
+        {branch ? (
+          <View style={rowStyle} accessible accessibilityLabel={`Branch ${branch}`}>
+            <Text style={labelStyle}>Branch</Text>
+            <View style={styles.inlineRow}>
+              <AppIcon name="branch" size={16} color={colors.secondaryLabel} />
+              <Text style={[monoValueStyle, styles.inlineValue]}>{branch}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {workflow ? (
+          <View style={rowStyle} accessible accessibilityLabel={`Workflow ${workflow}`}>
+            <Text style={labelStyle}>Workflow</Text>
+            <View style={styles.inlineRow}>
+              <AppIcon name="workflow" size={16} color={colors.secondaryLabel} />
+              <Text style={[valueStyle, styles.inlineValue]}>{workflow}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        <View style={rowStyle} accessible accessibilityLabel={`Started ${started}`}>
+          <Text style={labelStyle}>Started</Text>
+          <Text style={valueStyle}>{started}</Text>
+        </View>
+
+        {duration !== '' ? (
+          <View accessible accessibilityLabel={`Duration ${duration}`}>
+            <Text style={labelStyle}>Duration</Text>
+            <Text style={valueStyle}>{duration}</Text>
+          </View>
+        ) : null}
+      </SectionCard>
+    );
+  }
+
+  function renderLogBody() {
+    if (loader) {
+      return (
+        <View style={styles.viewIndicator}>
+          <ActivityIndicator size="small" color={accentString} />
+        </View>
+      );
+    }
+
+    if (errorMsg != null) {
+      return (
+        <ErrorState
+          message={errorMsg}
+          onRetry={() => {
+            setErrorMsg(null);
+            getBuildDetails(route.params.appSlug, route.params.buildModel.slug);
+          }}
+          testID="build-detail-error-state"
+        />
+      );
+    }
+
+    if (logChunks.length === 0) {
+      return (
+        <EmptyState
+          icon="logs"
+          title="No logs yet"
+          message="This build hasn't produced any log output."
+          testID="build-detail-empty-state"
+        />
+      );
+    }
+
+    const logSurfaceStyle: ViewStyle = {
+      flex: 1,
+      backgroundColor: colors.secondaryBackground,
+      borderRadius: spacing.radius.md,
+      padding: spacing.spacing.sm,
+      marginTop: spacing.spacing.sm,
+    };
+
+    const logTextStyle: TextStyle = {
+      fontFamily: type.mono,
+      fontSize: type.footnote.fontSize,
+    };
+
+    return (
+      <View style={logSurfaceStyle}>
+        <FlatList
+          ref={logListRef}
+          data={logLines}
+          keyExtractor={item => item.id}
+          renderItem={({item}) => (
+            <LogRow text={item.text} textStyle={logTextStyle} />
+          )}
+          // Keep a large but bounded render window so very long logs stay
+          // responsive instead of mounting thousands of <Text> trees at once.
+          initialNumToRender={40}
+          maxToRenderPerBatch={40}
+          windowSize={11}
+          removeClippedSubviews
+          scrollEventThrottle={16}
+          onScroll={onScroll}
+          onContentSizeChange={() => {
+            logListRef.current?.scrollToEnd({animated: false});
+          }}
+        />
+
+        {!atBottom ? (
+          <JumpToBottomButton
+            backgroundColor={colors.accent as ViewStyle['backgroundColor']}
+            iconColor={onFillString}
+            reduceMotion={reduceMotion}
+            onPress={() =>
+              logListRef.current?.scrollToEnd({animated: !reduceMotion})
+            }
+          />
+        ) : null}
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.superView}>
-      {loader ? (
-        <View style={styles.viewIndicator}>
-          <ActivityIndicator size="small" color="#0000ff" />
-        </View>
-      ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          onContentSizeChange={() => {
-            if (scrollViewRef.current) {
-              scrollViewRef.current.scrollToEnd({animated: false});
-            }
-          }}>
-          <View style={styles.container}>
-            {(getBuildData?.log_chunks ?? []).map((line, index) => (
-              <View style={styles.ansiSuperView}>
-                <AnsiText
-                  textStyle={styles.defaultText}
-                  containerStyle={styles.line}
-                  ansi={(getBuildData?.log_chunks[index].chunk ?? '').toString()}
-                  key={`k-${index}`}
-                />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      )}
+    <View style={[styles.superView, {backgroundColor: colors.groupedBackground}]}>
+      <View
+        style={[
+          styles.content,
+          styles.contentColumn,
+          {padding: spacing.spacing.md, maxWidth: spacing.maxContentWidth},
+        ]}>
+        {renderSummaryCard()}
+        {renderLogBody()}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  superView: {flex: 1, justifyContent: 'center'},
-  container: {
+  superView: {
     flex: 1,
   },
-  line: {
-    backgroundColor: 'black',
+  content: {
+    flex: 1,
+  },
+  contentColumn: {
+    width: '100%',
+    alignSelf: 'center',
   },
   viewIndicator: {
     flex: 1,
     justifyContent: 'center',
   },
-  ansiSuperView: {
-    marginHorizontal: 0,
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  defaultText: {
-    color: 'white',
+  inlineValue: {
+    marginLeft: 6,
+  },
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  jumpContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+  },
+  jumpButton: {
+    minWidth: 44,
+    minHeight: 44,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  jumpIcon: {
+    // Rotate the right-chevron to point downward ("jump to bottom").
+    transform: [{rotate: '90deg'}],
   },
 });
 

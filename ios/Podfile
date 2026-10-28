@@ -5,6 +5,11 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# React Native 0.88 requires iOS 15.1: its Fabric/ReactCommon/Yoga/Hermes pods
+# hard-require it, so iOS 13 is not achievable without downgrading RN. Keep the
+# floor at RN's own minimum via min_ios_version_supported (resolves to 15.1).
+# The @mythologi/react-native-sfsymbols fork (podspec :ios => "13.0") runs fine
+# at 15.1 and avoids the iOS-16-locked Nitro library.
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
@@ -37,5 +42,18 @@ target 'Bitrise' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    # Xcode 27 rejects any deployment target below iOS 15.0 as a hard error, but
+    # react_native_post_install does not raise resource-bundle sub-targets (e.g.
+    # AsyncStorage-AsyncStorage_resources), which can keep a stale 13.0 value.
+    # Force every target — including resource bundles — to the RN 0.88 floor.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || current.to_f < 15.1
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+      end
+    end
   end
 end

@@ -1,0 +1,12 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "label": "Large-title collapse deferred (non-blocking)",
+      "severity": "info",
+      "confidence": "confirmed",
+      "detail": "R10's native collapsing \"Apps\" title is not implemented; an in-screen large title that scrolls with the list is used because the JS @react-navigation/stack lacks headerLargeTitle. Accepted per plan D1 and documented in the manual checklist; revisit when the navigator migrates to native-stack (BuildList task). No action required for this pass."
+    }
+  ],
+  "reviewDoc": "/Users/siddharthpatel/Documents/Siddharth/iOS Project/BitriseMobile/.kiro/specs/ui-redesign-apple-hig/task5-6-review.md"
+}

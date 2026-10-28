@@ -1444,6 +1444,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-sfsymbols (2.2.1):
+    - React-Core
   - React-NativeModulesApple (0.88.0):
     - hermes-engine
     - React-bridging
@@ -1907,6 +1909,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNReactNativeHapticFeedback (3.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNReanimated (4.7.1):
     - hermes-engine
     - RCTRequired
@@ -2189,6 +2214,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - "react-native-sfsymbols (from `../node_modules/@mythologi/react-native-sfsymbols`)"
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../node_modules/react-native/ReactCommon/react/networking`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2229,6 +2255,7 @@ DEPENDENCIES:
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
+  - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -2335,6 +2362,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-sfsymbols:
+    :path: "../node_modules/@mythologi/react-native-sfsymbols"
   React-NativeModulesApple:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios"
   React-networking:
@@ -2415,6 +2444,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
+  RNReactNativeHapticFeedback:
+    :path: "../node_modules/react-native-haptic-feedback"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2476,6 +2507,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 3c7c5f3624403317fe91b4ddefa86b60023552a8
   React-mutationobservernativemodule: 7284a91b3c7d7fb85b5d4ac04f7f8da811b22977
   react-native-safe-area-context: 7b143af09becaf26ba247b9a82d355f91b77b9b0
+  react-native-sfsymbols: a5e3f7d58453b72b68d5c03d4abc2f8aa3a26a7b
   React-NativeModulesApple: 52f3def085f129de1307e3eb78e26729ff70f421
   React-networking: e97a095de90a95bf811b887e2dfdb225f20fd493
   React-oscompat: 6865eead03a4aeba8d15b74cf168c7db3377cb63
@@ -2516,12 +2548,13 @@ SPEC CHECKSUMS:
   RNCMaskedView: a9c7c7992c85d8073707286fb59a857bc786cbd5
   RNGestureHandler: abdc2d49ac3970908acd127980b429d377927ee1
   RNKeychain: c151043ce48ce98b038cff539b916f5e2fb7456a
+  RNReactNativeHapticFeedback: a1bba076645e8fedcb65c8e70461b77cd5d6dd32
   RNReanimated: 5c641cc430b7255eae87c8039204eb0f816ea1b8
   RNScreens: 96c6d636ee9b2b4c3f062db05eecc59217e7f7df
   RNWorklets: 488806637a21eb17812a48dadca7cb8c698c8cfd
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
-PODFILE CHECKSUM: a2a6913d64140acee12669b98ec00e00198d604e
+PODFILE CHECKSUM: 8aa7e011ee425c9e5141f11a5ee40133c719177c
 
-COCOAPODS: 1.17.0
+COCOAPODS: 1.16.2
