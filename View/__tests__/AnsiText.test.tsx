@@ -67,6 +67,23 @@ describe('AnsiText theme-aware palette', () => {
     );
   });
 
+  it('renders white (37) and bright-white (97) as their distinct palette values', () => {
+    mockScheme('light');
+    let whiteTree!: renderer.ReactTestRenderer;
+    act(() => {
+      whiteTree = renderer.create(<AnsiText ansi={sgr(37)} />);
+    });
+    expect(firstEntryColor(whiteTree)).toBe(getAnsiPalette('light').white);
+
+    let brightTree!: renderer.ReactTestRenderer;
+    act(() => {
+      brightTree = renderer.create(<AnsiText ansi={sgr(97)} />);
+    });
+    expect(firstEntryColor(brightTree)).toBe(
+      getAnsiPalette('light')['bright-white'],
+    );
+  });
+
   it('default foreground (no ANSI color) follows the theme label color', () => {
     mockScheme('dark');
     let tree!: renderer.ReactTestRenderer;

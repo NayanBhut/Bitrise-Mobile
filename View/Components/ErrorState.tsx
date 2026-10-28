@@ -35,7 +35,6 @@ export function ErrorState({
   testID,
 }: ErrorStateProps) {
   const {colors, type, spacing} = useTheme();
-  const errorColor = colors.statusFailed;
 
   const containerStyle: StyleProp<ViewStyle> = [
     styles.container,
@@ -51,11 +50,7 @@ export function ErrorState({
 
   return (
     <View style={containerStyle} testID={testID}>
-      <AppIcon
-        name="error"
-        size={48}
-        color={typeof errorColor === 'string' ? errorColor : undefined}
-      />
+      <AppIcon name="error" size={48} color={colors.statusFailed} />
       <Text style={messageStyle} allowFontScaling>
         {message}
       </Text>

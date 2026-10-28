@@ -3,7 +3,7 @@ import {Text, TextStyle} from 'react-native';
 import Anser from 'anser';
 import {ColorToken} from './Theme/colors';
 import {useTheme} from './Theme/useTheme';
-import {ANSER_RGB_TO_KEY, getAnsiPalette, normalizeRgb} from './ansiPalette';
+import {ansiKeyForFg, getAnsiPalette} from './ansiPalette';
 
 type AnsiTextProps = {
   ansi: string;
@@ -27,7 +27,7 @@ function resolveEntryColor(
   if (fg == null || fg === '') {
     return labelColor;
   }
-  const key = ANSER_RGB_TO_KEY[normalizeRgb(fg)];
+  const key = ansiKeyForFg(fg);
   if (key == null) {
     return labelColor;
   }

@@ -56,4 +56,28 @@ describe('AppIcon (iOS)', () => {
     const symbol = findByType(tree.root, SFSymbolView)[0];
     expect(symbol.props.animation).toBeUndefined();
   });
+
+  it('applies a hex string color as the tint', async () => {
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<AppIcon name="error" color="#FF3B30" />);
+    });
+
+    const symbol = findByType(tree.root, SFSymbolView)[0];
+    expect(symbol.props.tintColor).toBe('#FF3B30');
+  });
+
+  it('omits a non-string (PlatformColor) token so the symbol keeps the dynamic system tint', async () => {
+    // A PlatformColor token is an OpaqueColorValue object, not a hex string;
+    // the native SF Symbols view parses tintColor as hex, so we forward
+    // undefined and let it fall back to the dynamic system label color.
+    const opaqueToken = {semantic: ['label']} as unknown as string;
+    let tree!: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<AppIcon name="error" color={opaqueToken} />);
+    });
+
+    const symbol = findByType(tree.root, SFSymbolView)[0];
+    expect(symbol.props.tintColor).toBeUndefined();
+  });
 });

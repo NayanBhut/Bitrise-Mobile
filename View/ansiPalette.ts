@@ -44,11 +44,41 @@ export function normalizeRgb(fg: string): string {
 }
 
 /**
- * Map of anser's emitted rgb triples (normalized) to our semantic ANSI keys.
- * Built from the exact strings `Anser.ansiToJson` produces for codes 30-37 and
- * 90-97. Note `white` and `bright-white` both emit `255,255,255`; we map that
- * single triple to `white` (the palette darkens/lightens it per scheme either
- * way, so the distinction is cosmetic).
+ * Map of anser's EXACT emitted `fg` strings to our semantic ANSI keys.
+ *
+ * `white` (code 37) and `bright-white` (code 97) are the only two ANSI colors
+ * that share the same RGB triple (255,255,255). anser disambiguates them by a
+ * quirk of its formatting: it emits `"255,255,255"` (no spaces) for `white` and
+ * `"255, 255, 255"` (with spaces) for `bright-white`. We therefore key this
+ * map on the raw strings so BOTH are reachable; `resolveAnsiFg` consults it
+ * first before falling back to the whitespace-normalized map below, which stays
+ * robust if anser ever varies the spacing for the other 14 colors.
+ */
+export const ANSER_RAW_TO_KEY: Record<string, AnsiColorKey> = {
+  '0, 0, 0': 'black',
+  '187, 0, 0': 'red',
+  '0, 187, 0': 'green',
+  '187, 187, 0': 'yellow',
+  '0, 0, 187': 'blue',
+  '187, 0, 187': 'magenta',
+  '0, 187, 187': 'cyan',
+  '255,255,255': 'white',
+  '85, 85, 85': 'bright-black',
+  '255, 85, 85': 'bright-red',
+  '0, 255, 0': 'bright-green',
+  '255, 255, 85': 'bright-yellow',
+  '85, 85, 255': 'bright-blue',
+  '255, 85, 255': 'bright-magenta',
+  '85, 255, 255': 'bright-cyan',
+  '255, 255, 255': 'bright-white',
+};
+
+/**
+ * Map of anser's emitted rgb triples (whitespace-normalized) to our semantic
+ * ANSI keys. Used as a fallback when the exact-string lookup misses. Because
+ * normalization collapses `white` and `bright-white` to one key, the shared
+ * `255,255,255` triple resolves to `white` here; `bright-white` is only
+ * reachable via the exact-string {@link ANSER_RAW_TO_KEY} map above.
  */
 export const ANSER_RGB_TO_KEY: Record<string, AnsiColorKey> = {
   [normalizeRgb('0, 0, 0')]: 'black',
@@ -67,6 +97,16 @@ export const ANSER_RGB_TO_KEY: Record<string, AnsiColorKey> = {
   [normalizeRgb('255, 85, 255')]: 'bright-magenta',
   [normalizeRgb('85, 255, 255')]: 'bright-cyan',
 };
+
+/**
+ * Resolve an anser `fg` string to a semantic ANSI key, or `null` if it is not
+ * one of the 16 standard ANSI colors. Prefers the exact-string match (so
+ * `white` vs `bright-white` stay distinct) and falls back to the normalized
+ * lookup.
+ */
+export function ansiKeyForFg(fg: string): AnsiColorKey | null {
+  return ANSER_RAW_TO_KEY[fg] ?? ANSER_RGB_TO_KEY[normalizeRgb(fg)] ?? null;
+}
 
 /**
  * Dark-mode palette. The log surface is `secondaryBackground` (`#1C1C1E` on
@@ -143,7 +183,7 @@ export function resolveAnsiFg(
   if (fg == null || fg === '') {
     return labelColor;
   }
-  const key = ANSER_RGB_TO_KEY[normalizeRgb(fg)];
+  const key = ansiKeyForFg(fg);
   if (key == null) {
     return labelColor;
   }

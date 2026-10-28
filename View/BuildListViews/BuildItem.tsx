@@ -83,8 +83,6 @@ const BuildItem: React.FC<BuildItemProps> = ({
     marginHorizontal: spacing.spacing.sm,
   };
 
-  const secondaryLabelColor = colors.secondaryLabel;
-
   const combinedLabel =
     `Build ${build.build_number}, ${statusLabel(build.status_text)}, ` +
     `branch ${build.branch}, ${relative}`;
@@ -110,13 +108,7 @@ const BuildItem: React.FC<BuildItemProps> = ({
         <BuildBranch build={build} theme={theme} />
       </View>
       <View style={workflowRowStyle}>
-        <AppIcon
-          name="workflow"
-          size={14}
-          color={
-            typeof secondaryLabelColor === 'string' ? secondaryLabelColor : undefined
-          }
-        />
+        <AppIcon name="workflow" size={14} color={colors.secondaryLabel} />
         <Text style={workflowTextStyle} numberOfLines={1} allowFontScaling>
           {build.triggered_workflow}
         </Text>
@@ -143,7 +135,6 @@ const BuildItem: React.FC<BuildItemProps> = ({
     return row;
   }
 
-  const onFillColor = colors.onFill;
   const abortActionStyle: ViewStyle = {
     backgroundColor: colors.destructive,
     justifyContent: 'center',
@@ -171,7 +162,7 @@ const BuildItem: React.FC<BuildItemProps> = ({
       <AppIcon
         name="abort"
         size={22}
-        color={typeof onFillColor === 'string' ? onFillColor : undefined}
+        color={colors.onFill}
         accessibilityLabel="Abort build"
       />
       <Text style={abortLabelStyle} allowFontScaling>

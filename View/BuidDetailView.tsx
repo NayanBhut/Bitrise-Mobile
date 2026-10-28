@@ -9,6 +9,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {BuildDetailModel} from '../API Calls/BuildDetailModel';
 import {AnsiText} from './AnsiText';
 
@@ -35,6 +40,63 @@ type RouteBuild = Partial<Build> & {slug: string};
 
 /** Distance (pt) from the bottom within which we consider the log "at bottom". */
 const BOTTOM_THRESHOLD = 24;
+
+/**
+ * Floating "jump to bottom" affordance. It fades in on appearance when motion
+ * is allowed and renders statically (but fully functional) under Reduce Motion.
+ */
+function JumpToBottomButton({
+  backgroundColor,
+  iconColor,
+  reduceMotion,
+  onPress,
+}: {
+  backgroundColor: ViewStyle['backgroundColor'];
+  iconColor?: string;
+  reduceMotion: boolean;
+  onPress: () => void;
+}) {
+  // Start transparent so the button can fade in; hooks run unconditionally.
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  const animatedStyle = useAnimatedStyle(() => ({opacity: opacity.value}));
+
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.value = 1;
+      return;
+    }
+    opacity.value = withTiming(1, {duration: 200});
+  }, [reduceMotion, opacity]);
+
+  const button = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Jump to bottom"
+      accessibilityHint="Scrolls to the latest log output"
+      testID="jump-to-bottom"
+      onPress={onPress}
+      style={[styles.jumpButton, {backgroundColor}]}>
+      <View style={styles.jumpIcon}>
+        <AppIcon
+          name="chevron"
+          size={22}
+          color={iconColor}
+          accessibilityLabel="Jump to bottom"
+        />
+      </View>
+    </Pressable>
+  );
+
+  if (reduceMotion) {
+    return <View style={styles.jumpContainer}>{button}</View>;
+  }
+
+  return (
+    <Animated.View style={[styles.jumpContainer, animatedStyle]}>
+      {button}
+    </Animated.View>
+  );
+}
 
 const BuildDetailView = ({
   navigation,
@@ -220,15 +282,7 @@ const BuildDetailView = ({
           <View style={rowStyle} accessible accessibilityLabel={`Branch ${branch}`}>
             <Text style={labelStyle}>Branch</Text>
             <View style={styles.inlineRow}>
-              <AppIcon
-                name="branch"
-                size={16}
-                color={
-                  typeof colors.secondaryLabel === 'string'
-                    ? colors.secondaryLabel
-                    : undefined
-                }
-              />
+              <AppIcon name="branch" size={16} color={colors.secondaryLabel} />
               <Text style={[monoValueStyle, styles.inlineValue]}>{branch}</Text>
             </View>
           </View>
@@ -238,15 +292,7 @@ const BuildDetailView = ({
           <View style={rowStyle} accessible accessibilityLabel={`Workflow ${workflow}`}>
             <Text style={labelStyle}>Workflow</Text>
             <View style={styles.inlineRow}>
-              <AppIcon
-                name="workflow"
-                size={16}
-                color={
-                  typeof colors.secondaryLabel === 'string'
-                    ? colors.secondaryLabel
-                    : undefined
-                }
-              />
+              <AppIcon name="workflow" size={16} color={colors.secondaryLabel} />
               <Text style={[valueStyle, styles.inlineValue]}>{workflow}</Text>
             </View>
           </View>
@@ -336,27 +382,14 @@ const BuildDetailView = ({
         </ScrollView>
 
         {!atBottom ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Jump to bottom"
-            accessibilityHint="Scrolls to the latest log output"
-            testID="jump-to-bottom"
+          <JumpToBottomButton
+            backgroundColor={colors.accent as ViewStyle['backgroundColor']}
+            iconColor={onFillString}
+            reduceMotion={reduceMotion}
             onPress={() =>
               scrollViewRef.current?.scrollToEnd({animated: !reduceMotion})
             }
-            style={[
-              styles.jumpButton,
-              {backgroundColor: colors.accent},
-            ]}>
-            <View style={styles.jumpIcon}>
-              <AppIcon
-                name="chevron"
-                size={22}
-                color={onFillString}
-                accessibilityLabel="Jump to bottom"
-              />
-            </View>
-          </Pressable>
+          />
         ) : null}
       </View>
     );
@@ -397,10 +430,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
-  jumpButton: {
+  jumpContainer: {
     position: 'absolute',
     right: 16,
     bottom: 16,
+  },
+  jumpButton: {
     minWidth: 44,
     minHeight: 44,
     width: 44,

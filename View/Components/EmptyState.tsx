@@ -37,7 +37,6 @@ export function EmptyState({
   testID,
 }: EmptyStateProps) {
   const {colors, type, spacing} = useTheme();
-  const secondaryLabel = colors.secondaryLabel;
 
   const containerStyle: StyleProp<ViewStyle> = [
     styles.container,
@@ -60,11 +59,7 @@ export function EmptyState({
 
   return (
     <View style={containerStyle} testID={testID}>
-      <AppIcon
-        name={icon}
-        size={48}
-        color={typeof secondaryLabel === 'string' ? secondaryLabel : undefined}
-      />
+      <AppIcon name={icon} size={48} color={colors.secondaryLabel} />
       <Text style={titleStyle} allowFontScaling>
         {title}
       </Text>

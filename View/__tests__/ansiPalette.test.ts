@@ -6,6 +6,7 @@ import {describe, expect, it} from '@jest/globals';
 import {
   AnsiColorKey,
   ANSER_RGB_TO_KEY,
+  ansiKeyForFg,
   getAnsiPalette,
   normalizeRgb,
   resolveAnsiFg,
@@ -47,6 +48,26 @@ describe('ANSER_RGB_TO_KEY', () => {
   });
 });
 
+describe('ansiKeyForFg', () => {
+  // anser emits "255,255,255" (no spaces) for white (code 37) and
+  // "255, 255, 255" (with spaces) for bright-white (code 97). The exact-string
+  // lookup keeps them distinct so bright-white is reachable at runtime.
+  it('distinguishes white from bright-white by anser\u2019s exact spacing', () => {
+    expect(ansiKeyForFg('255,255,255')).toBe('white');
+    expect(ansiKeyForFg('255, 255, 255')).toBe('bright-white');
+  });
+
+  it('resolves the other 14 colors regardless of spacing', () => {
+    expect(ansiKeyForFg('85, 85, 85')).toBe('bright-black');
+    expect(ansiKeyForFg('187, 0, 0')).toBe('red');
+    expect(ansiKeyForFg('0,187,0')).toBe('green');
+  });
+
+  it('returns null for an unrecognized foreground', () => {
+    expect(ansiKeyForFg('12, 34, 56')).toBeNull();
+  });
+});
+
 describe('getAnsiPalette', () => {
   it('defines every ANSI key in both schemes', () => {
     for (const scheme of ['light', 'dark'] as const) {
@@ -72,6 +93,18 @@ describe('resolveAnsiFg', () => {
     );
     expect(resolveAnsiFg('85, 85, 85', 'light', '#000000')).toBe(
       getAnsiPalette('light')['bright-black'],
+    );
+  });
+
+  it('resolves white and bright-white to their own (distinct) palette values', () => {
+    expect(resolveAnsiFg('255,255,255', 'light', '#000000')).toBe(
+      getAnsiPalette('light').white,
+    );
+    expect(resolveAnsiFg('255, 255, 255', 'light', '#000000')).toBe(
+      getAnsiPalette('light')['bright-white'],
+    );
+    expect(getAnsiPalette('light').white).not.toBe(
+      getAnsiPalette('light')['bright-white'],
     );
   });
 

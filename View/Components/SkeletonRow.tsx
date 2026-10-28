@@ -63,8 +63,10 @@ export function SkeletonRow({lines = 2, testID, style}: SkeletonRowProps) {
 
   const bars = (
     <View style={styles.bars}>
-      <View style={titleBarStyle} testID="skeleton-bar" />
-      {lines === 2 ? <View style={subtitleBarStyle} testID="skeleton-bar" /> : null}
+      <View style={titleBarStyle} testID="skeleton-bar-title" />
+      {lines === 2 ? (
+        <View style={subtitleBarStyle} testID="skeleton-bar-subtitle" />
+      ) : null}
     </View>
   );
 

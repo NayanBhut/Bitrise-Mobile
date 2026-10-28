@@ -82,7 +82,6 @@ function AppListRow({
   const {colors, type, spacing} = theme;
   const subtitle = app.project_type;
   const combinedLabel = subtitle ? `${app.title}, ${subtitle}` : app.title;
-  const tertiary = colors.tertiaryLabel;
   const hasAvatar = typeof app.avatar_url === 'string' && app.avatar_url.length > 0;
 
   const rowStyle: ViewStyle = {
@@ -134,11 +133,7 @@ function AppListRow({
         ) : null}
       </View>
       <View style={accessoryStyle}>
-        <AppIcon
-          name="chevron"
-          size={16}
-          color={typeof tertiary === 'string' ? tertiary : undefined}
-        />
+        <AppIcon name="chevron" size={16} color={colors.tertiaryLabel} />
       </View>
     </Pressable>
   );

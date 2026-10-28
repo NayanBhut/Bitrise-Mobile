@@ -42,7 +42,8 @@ describe('SkeletonRow', () => {
 
     expect(countHosts(tree, 'skeleton-animated')).toBe(1);
     expect(countHosts(tree, 'skeleton-static')).toBe(0);
-    expect(countHosts(tree, 'skeleton-bar')).toBeGreaterThan(0);
+    expect(countHosts(tree, 'skeleton-bar-title')).toBe(1);
+    expect(countHosts(tree, 'skeleton-bar-subtitle')).toBe(1);
   });
 
   it('renders a static placeholder when reduce motion is on', async () => {
@@ -54,7 +55,8 @@ describe('SkeletonRow', () => {
 
     expect(countHosts(tree, 'skeleton-static')).toBe(1);
     expect(countHosts(tree, 'skeleton-animated')).toBe(0);
-    expect(countHosts(tree, 'skeleton-bar')).toBeGreaterThan(0);
+    expect(countHosts(tree, 'skeleton-bar-title')).toBe(1);
+    expect(countHosts(tree, 'skeleton-bar-subtitle')).toBe(1);
   });
 
   it('renders a single bar when lines is 1', async () => {
@@ -63,6 +65,7 @@ describe('SkeletonRow', () => {
       tree = renderer.create(<SkeletonRow lines={1} />);
     });
 
-    expect(countHosts(tree, 'skeleton-bar')).toBe(1);
+    expect(countHosts(tree, 'skeleton-bar-title')).toBe(1);
+    expect(countHosts(tree, 'skeleton-bar-subtitle')).toBe(0);
   });
 });

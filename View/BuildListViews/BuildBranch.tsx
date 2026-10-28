@@ -15,7 +15,6 @@ interface BuildBranchProps {
  */
 const BuildBranch: React.FC<BuildBranchProps> = ({build, theme}) => {
   const {colors, type, spacing} = theme;
-  const labelColor = colors.label;
   const branchStyle: TextStyle = {
     fontFamily: type.mono,
     fontSize: type.subheadline.fontSize,
@@ -26,11 +25,7 @@ const BuildBranch: React.FC<BuildBranchProps> = ({build, theme}) => {
 
   return (
     <View style={styleSheet.row}>
-      <AppIcon
-        name="branch"
-        size={14}
-        color={typeof labelColor === 'string' ? labelColor : undefined}
-      />
+      <AppIcon name="branch" size={14} color={colors.label} />
       <Text style={branchStyle} numberOfLines={1} allowFontScaling>
         {build.branch}
       </Text>

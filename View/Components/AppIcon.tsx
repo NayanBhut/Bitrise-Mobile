@@ -7,6 +7,7 @@ import {
   SFSymbolView,
   SFSymbolWeight,
 } from 'react-native-nitro-sfsymbols';
+import {ColorToken} from '../Theme/colors';
 import {icons, IconName} from '../Theme/icons';
 import {useTheme} from '../Theme/useTheme';
 
@@ -28,8 +29,17 @@ export interface AppIconProps {
   weight?: AppIconWeight;
   /** Visual scale. */
   scale?: AppIconScale;
-  /** Tint color (hex string on iOS). Defaults to the system label color. */
-  color?: string;
+  /**
+   * Tint color. Accepts any theme {@link ColorToken} so callers can pass a
+   * color straight from `useTheme().colors` without stringifying it.
+   *
+   * On iOS the native SF Symbols view parses `tintColor` as a hex string, so a
+   * hex color is applied directly; a `PlatformColor` `OpaqueColorValue` (which
+   * cannot be expressed as hex) is not forwarded and the symbol keeps the
+   * dynamic system label tint, which already tracks light/dark automatically.
+   * On Android the token (hex string in both schemes) is applied to the glyph.
+   */
+  color?: ColorToken;
   /** Color rendering mode (iOS). */
   rendering?: AppIconRendering;
   /** Symbol effect (iOS 17+); skipped when Reduce Motion is enabled. */
@@ -63,13 +73,17 @@ export function AppIcon({
   const hasLabel = accessibilityLabel != null;
 
   if (Platform.OS === 'ios') {
+    // The native view parses `tintColor` as a hex string; forward a hex string
+    // so it is applied, and omit a non-string PlatformColor token so the symbol
+    // keeps its dynamic system label tint rather than an unparseable value.
+    const tint = typeof color === 'string' ? color : undefined;
     return (
       <SFSymbolView
         name={mapping.ios}
         size={size}
         weight={weight}
         scale={scale}
-        tintColor={color}
+        tintColor={tint}
         renderingMode={rendering}
         animation={
           effect && !reduceMotion ? {type: effect, repeating: true} : undefined
@@ -84,7 +98,7 @@ export function AppIcon({
   // new native font dependency.
   const androidStyle: TextStyle = {
     fontSize: size,
-    ...(color ? {color} : null),
+    ...(color != null ? {color} : null),
   };
   return (
     <Text

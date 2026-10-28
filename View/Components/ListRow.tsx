@@ -50,7 +50,6 @@ export function ListRow({
   const {colors, type, spacing} = useTheme();
   const pressable = onPress != null;
   const combinedLabel = subtitle ? `${title}, ${subtitle}` : title;
-  const tertiary = colors.tertiaryLabel;
 
   const containerStyle: StyleProp<ViewStyle> = [
     styles.container,
@@ -73,11 +72,7 @@ export function ListRow({
 
   const trailing = accessory ?? (
     pressable ? (
-      <AppIcon
-        name="chevron"
-        size={16}
-        color={typeof tertiary === 'string' ? tertiary : undefined}
-      />
+      <AppIcon name="chevron" size={16} color={colors.tertiaryLabel} />
     ) : null
   );
 

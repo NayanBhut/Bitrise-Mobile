@@ -79,7 +79,7 @@ export function StatusBadge({state, size = 16}: StatusBadgeProps) {
       <AppIcon
         name={descriptor.icon}
         size={size}
-        color={typeof color === 'string' ? color : undefined}
+        color={color}
         effect={state === BuildState.InProgress ? 'rotate' : undefined}
       />
       <Text style={[type.subheadline, styles.label, {color}]}>
