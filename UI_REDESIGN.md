@@ -24,16 +24,21 @@ were not modified, no files were renamed, and the four navigation route names
 
 ### Icon library — `react-native-sfsymbols` (iOS-13 fork, chosen)
 
-The app must support **iOS 13.0**. The previously chosen
-`react-native-nitro-sfsymbols` ships a podspec locked to `:ios => "16.0"` that
-cannot be lowered, so `pod install` failed with "required a higher minimum
-deployment target". SF Symbols as a technology exist on iOS 13+, so iOS 13 is
-the correct floor and the library had to change.
+The minimum iOS deployment target is **iOS 15.1**. This is dictated by React
+Native 0.88 itself: its Fabric / ReactCommon / Yoga / Hermes pods hard-require
+iOS 15.1, so `pod install` fails with "required a higher minimum deployment
+target" at any lower floor. iOS 13 was therefore not achievable without
+downgrading React Native, which we chose not to do. The Podfile keeps the floor
+at RN's own minimum via `platform :ios, min_ios_version_supported` (resolves to
+15.1 on RN 0.88).
 
-Chosen: the **Mythologi-XR fork** of `react-native-sfsymbols`, installed from
-git (`github:Mythologi-XR/react-native-sfsymbols`). Its podspec sets
-`:ios => "13.0"` and depends only on `React-Core` — no Nitro, no
-New-Architecture requirement. It keeps the "SF Symbols only on iOS" guarantee.
+The previously chosen `react-native-nitro-sfsymbols` is separately unusable: its
+podspec is locked to `:ios => "16.0"` (above even 15.1) and it is tied to the
+Nitro / New-Architecture stack. Chosen instead: the **@mythologi fork** of
+`react-native-sfsymbols` (`@mythologi/react-native-sfsymbols@2.2.1`, installed
+from npm). Its podspec sets `:ios => "13.0"` and depends only on `React-Core`
+(no Nitro), so it runs fine at the app's 15.1 floor and avoids the
+iOS-16-locked Nitro library. It keeps the "SF Symbols only on iOS" guarantee.
 
 Tradeoff (accepted honestly): the iOS-13 fork renders monochrome symbols (plus
 `multicolor`) and does **not** support hierarchical/palette rendering modes or
@@ -45,8 +50,7 @@ native symbol effects (bounce / pulse / variable color). As a result:
   `react-native-reanimated` (a gentle continuous rotation in `StatusBadge`),
   gated on Reduce Motion (static when Reduce Motion is on).
 
-Installed: `react-native-sfsymbols` from
-`github:Mythologi-XR/react-native-sfsymbols`. Removed:
+Installed: `@mythologi/react-native-sfsymbols@2.2.1` from npm. Removed:
 `react-native-nitro-sfsymbols` and its peer `react-native-nitro-modules`.
 
 Rephrased from the design document for brevity.
@@ -280,11 +284,11 @@ The following can only be validated on a device or simulator/emulator and are
 still outstanding. A native build is required first.
 
 1. **`pod install` (iOS).** Run `cd ios && bundle exec pod install` to link the
-   native dependencies: `react-native-sfsymbols` (iOS-13 fork),
+   native dependencies: `@mythologi/react-native-sfsymbols`,
    `react-native-haptic-feedback`, `@react-navigation/native-stack`, and
-   `react-native-screens`. With the Podfile at `platform :ios, '13.0'` and the
-   fork's iOS-13 podspec, resolution is expected to succeed. None of this has
-   been run from the current environment.
+   `react-native-screens`. With the Podfile at
+   `platform :ios, min_ios_version_supported` (iOS 15.1 on RN 0.88), resolution
+   succeeds (97 dependencies, 96 pods installed).
 
 2. **Device/appearance matrix.** Verify on:
    - iPhone small (e.g. iPhone SE / 13 mini) and iPhone Pro Max,

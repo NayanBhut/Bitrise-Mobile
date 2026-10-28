@@ -5,6 +5,11 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+# React Native 0.88 requires iOS 15.1: its Fabric/ReactCommon/Yoga/Hermes pods
+# hard-require it, so iOS 13 is not achievable without downgrading RN. Keep the
+# floor at RN's own minimum via min_ios_version_supported (resolves to 15.1).
+# The @mythologi/react-native-sfsymbols fork (podspec :ios => "13.0") runs fine
+# at 15.1 and avoids the iOS-16-locked Nitro library.
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 

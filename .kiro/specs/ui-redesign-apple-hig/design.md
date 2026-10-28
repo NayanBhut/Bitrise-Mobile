@@ -17,16 +17,25 @@ Candidates considered:
 | Library | Status | Fit |
 |---------|--------|-----|
 | `expo-symbols` | Maintained | Requires bootstrapping Expo Modules core into a bare project — heavier native change, more risk for a UI-only task. |
-| `react-native-nitro-sfsymbols` | Maintained | Nitro-based, feature-rich (all rendering modes + iOS 17 symbol effects) BUT its podspec is locked to `:ios => "16.0"` and cannot be lowered. `pod install` failed with "required a higher minimum deployment target". Incompatible with the iOS 13.0 requirement. |
-| **`react-native-sfsymbols` (Mythologi-XR fork)** | **Chosen** | Podspec sets `:ios => "13.0"` and depends only on `React-Core` (no Nitro, no New-Architecture requirement). Keeps "SF Symbols only on iOS". |
+| `react-native-nitro-sfsymbols` | Maintained | Nitro-based, feature-rich (all rendering modes + iOS 17 symbol effects) BUT its podspec is locked to `:ios => "16.0"` and cannot be lowered, and it is tied to the Nitro / New-Architecture stack. `pod install` failed with "required a higher minimum deployment target". |
+| **`@mythologi/react-native-sfsymbols@2.2.1`** | **Chosen** | Podspec sets `:ios => "13.0"` and depends only on `React-Core` (no Nitro, no New-Architecture requirement), so it runs fine at the app's 15.1 floor. Keeps "SF Symbols only on iOS". |
 
-Rationale: the app must support **iOS 13.0**. `react-native-nitro-sfsymbols`
-targets iOS 16.0 with a podspec floor that cannot be changed, so it was
-dropped. The chosen library is the Mythologi-XR fork of
-`react-native-sfsymbols`, whose podspec targets iOS 13.0 and depends only on
-`React-Core`. Installed from git: `github:Mythologi-XR/react-native-sfsymbols`
-(its `package.json` declares the npm name; the pod it vendors is named
-`react-native-sfsymbols`, matching autolinking).
+Minimum iOS deployment target: **iOS 15.1**. This is forced by React Native
+0.88 itself — its Fabric / ReactCommon / Yoga / Hermes pods hard-require iOS
+15.1, so `pod install` fails at any lower floor. iOS 13 was therefore not
+achievable without downgrading React Native, which was not done. The Podfile
+keeps the floor at RN's own minimum via `platform :ios, min_ios_version_supported`
+(resolves to 15.1 on RN 0.88); the Xcode project's
+`IPHONEOS_DEPLOYMENT_TARGET` is 15.1 across all configurations.
+
+The SF Symbols library still had to change because the original
+`react-native-nitro-sfsymbols` targets iOS 16.0 with an unchangeable podspec
+floor and is Nitro-bound. The chosen library is
+`@mythologi/react-native-sfsymbols@2.2.1`, installed from npm, whose podspec
+targets iOS 13.0 and depends only on `React-Core`. It was adopted (rather than
+simply raising the floor and keeping Nitro) to stay off the iOS-16-locked /
+New-Architecture-bound Nitro library. The pod it vendors is named
+`react-native-sfsymbols`, matching autolinking.
 
 Tradeoff (accepted): the iOS-13 fork renders monochrome symbols (plus
 `multicolor`) and does **not** provide hierarchical/palette rendering modes or
@@ -38,10 +47,9 @@ native symbol effects (bounce/pulse/variableColor). Consequences:
   `react-native-reanimated` (a gentle continuous rotation in `StatusBadge`),
   gated on Reduce Motion so it renders static when Reduce Motion is on.
 
-Installed: `react-native-sfsymbols` from
-`github:Mythologi-XR/react-native-sfsymbols` (iOS-13 podspec). The former Nitro
-packages (`react-native-nitro-sfsymbols`, `react-native-nitro-modules`) were
-removed.
+Installed: `@mythologi/react-native-sfsymbols@2.2.1` from npm (iOS-13 podspec).
+The former Nitro packages (`react-native-nitro-sfsymbols`,
+`react-native-nitro-modules`) were removed.
 
 ### Haptics: `react-native-haptic-feedback@^3.0.0`
 
@@ -58,9 +66,9 @@ bottom button). All custom animation is gated behind a Reduce Motion check.
 
 The SF Symbols module is native. A `cd ios && bundle exec pod install` (via the
 project's bundler setup) is required before the next iOS build. With the Podfile
-at `platform :ios, '13.0'` and the `react-native-sfsymbols` fork's iOS-13
-podspec, pod resolution is expected to succeed. This is a manual/CI step
-captured in tasks.md; it cannot be verified from the current environment.
+at `platform :ios, min_ios_version_supported` (iOS 15.1 on RN 0.88) and the
+`@mythologi/react-native-sfsymbols` iOS-13 podspec, pod resolution succeeds
+(97 dependencies, 96 pods installed).
 
 ## Architecture
 
