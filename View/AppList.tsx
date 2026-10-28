@@ -345,6 +345,13 @@ const AppList = ({navigation, route}: AppListScreenProps) => {
 
   // Styles derived from theme tokens.
   const mainBackground: ViewStyle = {backgroundColor: colors.groupedBackground};
+  // Constrain list content to a readable column on wide screens (iPad) and
+  // center it, instead of letting rows run edge-to-edge.
+  const listContentStyle: ViewStyle = {
+    width: '100%',
+    maxWidth: spacing.maxContentWidth,
+    alignSelf: 'center',
+  };
   const searchStyle: TextStyle = {
     ...type.body,
     color: colors.label,
@@ -454,6 +461,7 @@ const AppList = ({navigation, route}: AppListScreenProps) => {
         renderSectionHeader={renderSectionHeader}
         ItemSeparatorComponent={RowSeparator}
         ListHeaderComponent={listHeader}
+        contentContainerStyle={listContentStyle}
         keyExtractor={(item, index) => item.slug ?? index.toString()}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} />

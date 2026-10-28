@@ -132,7 +132,9 @@ const LoginForm = ({
 
   const hintStyle: TextStyle = {
     ...type.footnote,
-    color: colors.accent,
+    // Footnote is body-size text, so use the AA-safe link color (a darker blue
+    // on light surfaces) rather than the accent tint.
+    color: colors.link,
     textAlign: 'center',
     marginTop: spacing.spacing.lg,
   };

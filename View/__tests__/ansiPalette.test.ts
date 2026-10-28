@@ -86,6 +86,42 @@ describe('getAnsiPalette', () => {
   });
 });
 
+/** Relative luminance per WCAG 2.x for a #RRGGBB hex string. */
+function relativeLuminance(hex: string): number {
+  const channel = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** WCAG contrast ratio between two #RRGGBB hex strings. */
+function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const hi = Math.max(la, lb);
+  const lo = Math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+describe('light ANSI palette contrast (F-7 regression)', () => {
+  // Light log surface is the grouped background #F2F2F7 (Android light). Every
+  // ANSI color is used as body-size (13pt footnote) mono log text, so each
+  // must clear the WCAG AA 4.5:1 body threshold on that surface.
+  const LIGHT_SURFACE = '#F2F2F7';
+
+  it('keeps every light-mode ANSI color at or above AA (4.5:1) on #F2F2F7', () => {
+    const palette = getAnsiPalette('light');
+    for (const key of ALL_KEYS) {
+      const ratio = contrastRatio(palette[key], LIGHT_SURFACE);
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
 describe('resolveAnsiFg', () => {
   it('resolves a recognized ANSI triple to the scheme palette value', () => {
     expect(resolveAnsiFg('85, 85, 85', 'dark', '#FFFFFF')).toBe(

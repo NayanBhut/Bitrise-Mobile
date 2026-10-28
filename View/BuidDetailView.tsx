@@ -1,11 +1,12 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
+  TextStyle,
   View,
   ViewStyle,
 } from 'react-native';
@@ -98,6 +99,36 @@ function JumpToBottomButton({
   );
 }
 
+/** A single virtualized log line with a stable identity. */
+type LogLine = {
+  /** Stable key: line index combined with content so reused rows stay keyed. */
+  id: string;
+  /** The raw (possibly ANSI-escaped) text for this line. */
+  text: string;
+};
+
+/**
+ * Memoized log-line row. Wrapping in `React.memo` keeps each line's ANSI
+ * parsing from re-running on unrelated parent re-renders; `AnsiText` memoizes
+ * the parse per `ansi` string internally.
+ */
+const LogRow = React.memo(function LogRowItem({
+  text,
+  textStyle,
+}: {
+  text: string;
+  textStyle: TextStyle;
+}) {
+  return (
+    <AnsiText
+      textStyle={textStyle}
+      containerStyle={textStyle}
+      selectable
+      ansi={text}
+    />
+  );
+});
+
 const BuildDetailView = ({
   navigation,
   route,
@@ -113,7 +144,7 @@ const BuildDetailView = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState<boolean>(true);
 
-  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const logListRef = useRef<FlatList<LogLine>>(null);
 
   const buildModel = route.params.buildModel;
 
@@ -224,7 +255,21 @@ const BuildDetailView = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getBuildData, fullLogLoading, colors.accent]);
 
-  const logChunks = getBuildData?.log_chunks ?? [];
+  const logChunks = useMemo(
+    () => getBuildData?.log_chunks ?? [],
+    [getBuildData?.log_chunks],
+  );
+
+  // Build stable-keyed log lines for the virtualized list. Keying on index +
+  // content keeps reconciliation stable even though logs are append-only.
+  const logLines: LogLine[] = useMemo(
+    () =>
+      logChunks.map((line, index) => {
+        const text = (line.chunk ?? '').toString();
+        return {id: `${index}-${text.length}`, text};
+      }),
+    [logChunks],
+  );
 
   const accentColor = colors.accent;
   const accentString = typeof accentColor === 'string' ? accentColor : undefined;
@@ -354,32 +399,32 @@ const BuildDetailView = ({
       marginTop: spacing.spacing.sm,
     };
 
-    const logTextStyle = {
+    const logTextStyle: TextStyle = {
       fontFamily: type.mono,
       fontSize: type.footnote.fontSize,
     };
 
     return (
       <View style={logSurfaceStyle}>
-        <ScrollView
-          ref={scrollViewRef}
+        <FlatList
+          ref={logListRef}
+          data={logLines}
+          keyExtractor={item => item.id}
+          renderItem={({item}) => (
+            <LogRow text={item.text} textStyle={logTextStyle} />
+          )}
+          // Keep a large but bounded render window so very long logs stay
+          // responsive instead of mounting thousands of <Text> trees at once.
+          initialNumToRender={40}
+          maxToRenderPerBatch={40}
+          windowSize={11}
+          removeClippedSubviews
           scrollEventThrottle={16}
           onScroll={onScroll}
           onContentSizeChange={() => {
-            if (scrollViewRef.current) {
-              scrollViewRef.current.scrollToEnd({animated: false});
-            }
-          }}>
-          {logChunks.map((line, index) => (
-            <AnsiText
-              key={`k-${index}`}
-              textStyle={logTextStyle}
-              containerStyle={logTextStyle}
-              selectable
-              ansi={(logChunks[index].chunk ?? '').toString()}
-            />
-          ))}
-        </ScrollView>
+            logListRef.current?.scrollToEnd({animated: false});
+          }}
+        />
 
         {!atBottom ? (
           <JumpToBottomButton
@@ -387,7 +432,7 @@ const BuildDetailView = ({
             iconColor={onFillString}
             reduceMotion={reduceMotion}
             onPress={() =>
-              scrollViewRef.current?.scrollToEnd({animated: !reduceMotion})
+              logListRef.current?.scrollToEnd({animated: !reduceMotion})
             }
           />
         ) : null}
@@ -397,7 +442,12 @@ const BuildDetailView = ({
 
   return (
     <View style={[styles.superView, {backgroundColor: colors.groupedBackground}]}>
-      <View style={[styles.content, {padding: spacing.spacing.md}]}>
+      <View
+        style={[
+          styles.content,
+          styles.contentColumn,
+          {padding: spacing.spacing.md, maxWidth: spacing.maxContentWidth},
+        ]}>
         {renderSummaryCard()}
         {renderLogBody()}
       </View>
@@ -411,6 +461,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentColumn: {
+    width: '100%',
+    alignSelf: 'center',
   },
   viewIndicator: {
     flex: 1,

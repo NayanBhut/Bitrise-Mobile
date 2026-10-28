@@ -143,18 +143,23 @@ const lightPalette: Record<AnsiColorKey, string> = {
   black: '#1C1C1E',
   red: '#C50F1F',
   green: '#1E7E34',
-  yellow: '#8A6D00',
+  // Darkened to ≥4.5:1 on the light log surface #F2F2F7 (was #8A6D00 = 4.41).
+  yellow: '#7A5E00',
   blue: '#0040DD',
   magenta: '#A3008F',
   cyan: '#0B6E7A',
   white: '#6C6C70',
   'bright-black': '#48484A',
-  'bright-red': '#D63D2C',
-  'bright-green': '#2E8B3D',
-  'bright-yellow': '#9C7A00',
+  // Darkened to ≥4.5:1 on #F2F2F7 (was #D63D2C = 4.12).
+  'bright-red': '#C0290F',
+  // Darkened to ≥4.5:1 on #F2F2F7 (was #2E8B3D = 3.86).
+  'bright-green': '#277030',
+  // Darkened to ≥4.5:1 on #F2F2F7 (was #9C7A00 = 3.62).
+  'bright-yellow': '#7A5E00',
   'bright-blue': '#0A58CA',
   'bright-magenta': '#B5179E',
-  'bright-cyan': '#117A8B',
+  // Darkened to clear the 4.5:1 bar on #F2F2F7 (was #117A8B = 4.50 borderline).
+  'bright-cyan': '#0E6C7A',
   'bright-white': '#3C3C43',
 };
 

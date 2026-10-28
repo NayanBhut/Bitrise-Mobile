@@ -32,6 +32,11 @@ export interface ThemeColors {
   fill: ColorToken;
   /** Accent / tint color used sparingly for interactive elements. */
   accent: ColorToken;
+  /**
+   * Link color for inline text links. Darker than `accent` on light surfaces
+   * so it meets WCAG AA body contrast when used at body/footnote text sizes.
+   */
+  link: ColorToken;
   /** Status: build succeeded. */
   statusSuccess: ColorToken;
   /** Status: build failed. */
@@ -69,6 +74,7 @@ const iosColors: ThemeColors = {
   separator: PlatformColor('separator'),
   fill: PlatformColor('systemFill'),
   accent: PlatformColor('systemBlue'),
+  link: PlatformColor('link'),
   statusSuccess: PlatformColor('systemGreen'),
   statusFailed: PlatformColor('systemRed'),
   statusInProgress: PlatformColor('systemBlue'),
@@ -95,10 +101,15 @@ const androidLight: ThemeColors = {
   separator: '#C6C6C8',
   fill: '#E5E5EA',
   accent: '#007AFF',
+  // Darker blue so inline link text meets AA (4.5:1) on light surfaces:
+  // 7.56 on #FFFFFF, 6.78 on grouped #F2F2F7.
+  link: '#0040DD',
   statusSuccess: '#1E7E34',
   statusFailed: '#C50F1F',
   statusInProgress: '#0040DD',
-  statusOnHold: '#B25E00',
+  // Darkened from #B25E00 so the status label meets AA on grouped surfaces:
+  // 5.86 on #FFFFFF, 5.26 on grouped #F2F2F7.
+  statusOnHold: '#9A5200',
   statusAborted: '#636366',
   destructive: '#C50F1F',
   onFill: '#FFFFFF',
@@ -119,6 +130,8 @@ const androidDark: ThemeColors = {
   separator: '#38383A',
   fill: '#2C2C2E',
   accent: '#0A84FF',
+  // On dark surfaces the accent blue already passes AA, so link matches it.
+  link: '#0A84FF',
   statusSuccess: '#30D158',
   statusFailed: '#FF453A',
   statusInProgress: '#409CFF',

@@ -243,6 +243,13 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
 
   const mainBackground: ViewStyle = {backgroundColor: colors.groupedBackground};
   const accentColor = colors.accent;
+  // Constrain list content to a readable column on wide screens (iPad) and
+  // center it, instead of letting rows run edge-to-edge.
+  const listContentStyle: ViewStyle = {
+    width: '100%',
+    maxWidth: theme.spacing.maxContentWidth,
+    alignSelf: 'center',
+  };
 
   function renderBody() {
     if (isInitialLoading) {
@@ -284,6 +291,7 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
     return (
       <FlatList
         data={builds}
+        contentContainerStyle={listContentStyle}
         keyExtractor={(item: Build) => item.slug}
         renderItem={({item}: {item: Build}) => (
           <BuildItem
