@@ -10,15 +10,17 @@ import renderer, {act} from 'react-test-renderer';
 
 // Mock the data layer so no real network/keychain is hit.
 jest.mock('../../API Calls/TokenStorage', () => ({
-  getToken: jest.fn().mockResolvedValue(null),
-  saveToken: jest.fn().mockResolvedValue(undefined),
-  clearToken: jest.fn().mockResolvedValue(undefined),
+  getToken: jest.fn<() => Promise<string | null>>().mockResolvedValue(null),
+  saveToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  clearToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../API Calls/APIService', () => ({
   __esModule: true,
   default: class {
-    get = jest.fn().mockResolvedValue({data: [], paging: {next: ''}});
+    get = jest
+      .fn<() => Promise<unknown>>()
+      .mockResolvedValue({data: [], paging: {next: ''}});
   },
 }));
 

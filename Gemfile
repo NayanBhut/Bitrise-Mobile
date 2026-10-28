@@ -6,7 +6,9 @@ ruby ">= 2.6.10"
 # Exclude problematic versions of cocoapods and activesupport that causes build failures.
 gem 'cocoapods', '~> 1.16.0'
 gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
-gem 'xcodeproj', '< 1.26.0'
+# cocoapods ~> 1.16 requires xcodeproj >= 1.26.0, so the old `< 1.26.0`
+# upper bound contradicted it. Allow the version cocoapods 1.16 needs.
+gem 'xcodeproj', '>= 1.26.0', '< 2.0'
 gem 'concurrent-ruby', '< 1.3.4'
 
 # Ruby 3.4.0 has removed some libraries from the standard library.

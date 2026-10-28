@@ -7,7 +7,7 @@ import React from 'react';
 import {Text} from 'react-native';
 import {expect, it, describe, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {SFSymbolView} from 'react-native-nitro-sfsymbols';
+import {SFSymbol} from '@mythologi/react-native-sfsymbols';
 import {ErrorState} from '../ErrorState';
 import {icons} from '../../Theme/icons';
 
@@ -29,7 +29,7 @@ describe('ErrorState', () => {
       tree = renderer.create(<ErrorState message="Oops" onRetry={() => {}} />);
     });
 
-    const symbol = tree.root.findAllByType(SFSymbolView);
+    const symbol = tree.root.findAllByType(SFSymbol);
     expect(symbol).toHaveLength(1);
     expect(symbol[0].props.name).toBe(icons.error.ios);
   });

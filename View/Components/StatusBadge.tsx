@@ -1,8 +1,16 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import {BuildState} from '../../API Calls/BuildModel';
 import {IconName} from '../Theme/icons';
-import {ThemeColors} from '../Theme/colors';
+import {ColorToken, ThemeColors} from '../Theme/colors';
 import {useTheme} from '../Theme/useTheme';
 import {AppIcon} from './AppIcon';
 
@@ -57,6 +65,44 @@ export function statusLabel(state: BuildState): string {
   return DESCRIPTORS[state]?.label ?? String(state);
 }
 
+/**
+ * The running icon, continuously rotated in JS with react-native-reanimated.
+ *
+ * The iOS-13 `react-native-sfsymbols` library has no native symbol effects, so
+ * the "running build" motion that previously used a native symbol animation is
+ * now driven here in JS. The rotation is gated on Reduce Motion: when it is on
+ * the icon renders statically. `AppIcon`'s `effect` prop is passed for
+ * source-compatibility but is a documented no-op on the native symbol.
+ */
+function RunningIcon({size, color}: {size: number; color: ColorToken}) {
+  const {reduceMotion} = useTheme();
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      cancelAnimation(rotation);
+      rotation.value = 0;
+      return;
+    }
+    rotation.value = withRepeat(
+      withTiming(360, {duration: 1000, easing: Easing.linear}),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(rotation);
+  }, [reduceMotion, rotation]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{rotate: `${rotation.value}deg`}],
+  }));
+
+  return (
+    <Animated.View style={reduceMotion ? undefined : animatedStyle}>
+      <AppIcon name="running" size={size} color={color} effect="rotate" />
+    </Animated.View>
+  );
+}
+
 export interface StatusBadgeProps {
   /** Build state to represent. */
   state: BuildState;
@@ -67,7 +113,8 @@ export interface StatusBadgeProps {
 /**
  * Renders a build status as color + icon + text label together (never color
  * alone), satisfying the "no status by color alone" accessibility rule. The
- * in-progress state animates its symbol, gated on Reduce Motion inside AppIcon.
+ * in-progress state animates its symbol in JS (reanimated), gated on Reduce
+ * Motion; all other states render a static icon.
  */
 export function StatusBadge({state, size = 16}: StatusBadgeProps) {
   const {colors, type} = useTheme();
@@ -76,12 +123,11 @@ export function StatusBadge({state, size = 16}: StatusBadgeProps) {
 
   return (
     <View style={styles.container} accessibilityLabel={descriptor.label}>
-      <AppIcon
-        name={descriptor.icon}
-        size={size}
-        color={color}
-        effect={state === BuildState.InProgress ? 'rotate' : undefined}
-      />
+      {state === BuildState.InProgress ? (
+        <RunningIcon size={size} color={color} />
+      ) : (
+        <AppIcon name={descriptor.icon} size={size} color={color} />
+      )}
       <Text style={[type.subheadline, styles.label, {color}]}>
         {descriptor.label}
       </Text>

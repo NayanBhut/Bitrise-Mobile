@@ -7,7 +7,8 @@ import React from 'react';
 import {Text} from 'react-native';
 import {expect, it, describe} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {SFSymbolView} from 'react-native-nitro-sfsymbols';
+import Animated from 'react-native-reanimated';
+import {SFSymbol} from '@mythologi/react-native-sfsymbols';
 import {BuildState} from '../../../API Calls/BuildModel';
 import {StatusBadge} from '../StatusBadge';
 import {icons} from '../../Theme/icons';
@@ -34,7 +35,7 @@ describe('StatusBadge', () => {
       });
 
       // Icon present with the mapped SF Symbol name (never color alone).
-      const symbol = tree.root.findAllByType(SFSymbolView);
+      const symbol = tree.root.findAllByType(SFSymbol);
       expect(symbol).toHaveLength(1);
       expect(symbol[0].props.name).toBe(icons[icon].ios);
 
@@ -45,7 +46,10 @@ describe('StatusBadge', () => {
     },
   );
 
-  it('animates only the in-progress state', async () => {
+  it('wraps only the in-progress icon in a JS-animated view', async () => {
+    // The iOS-13 library has no native symbol effects, so the running state's
+    // motion is driven in JS: its icon is wrapped in an Animated.View while
+    // other states render the icon directly.
     let running!: renderer.ReactTestRenderer;
     let success!: renderer.ReactTestRenderer;
     await act(async () => {
@@ -53,11 +57,7 @@ describe('StatusBadge', () => {
       success = renderer.create(<StatusBadge state={BuildState.Success} />);
     });
 
-    expect(
-      running.root.findAllByType(SFSymbolView)[0].props.animation,
-    ).toBeDefined();
-    expect(
-      success.root.findAllByType(SFSymbolView)[0].props.animation,
-    ).toBeUndefined();
+    expect(running.root.findAllByType(Animated.View).length).toBeGreaterThan(0);
+    expect(success.root.findAllByType(Animated.View)).toHaveLength(0);
   });
 });

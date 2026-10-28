@@ -22,26 +22,32 @@ were not modified, no files were renamed, and the four navigation route names
 
 ## Dependency decisions
 
-### Icon library — `react-native-nitro-sfsymbols` (chosen)
+### Icon library — `react-native-sfsymbols` (iOS-13 fork, chosen)
 
-The brief suggested either `expo-symbols` or the classic `react-native-sfsymbols`.
-Neither fit a bare React Native 0.88 app on the New Architecture:
+The app must support **iOS 13.0**. The previously chosen
+`react-native-nitro-sfsymbols` ships a podspec locked to `:ios => "16.0"` that
+cannot be lowered, so `pod install` failed with "required a higher minimum
+deployment target". SF Symbols as a technology exist on iOS 13+, so iOS 13 is
+the correct floor and the library had to change.
 
-- `react-native-sfsymbols` (birkir) is effectively unmaintained (last meaningful
-  activity around 2022, iOS 14 era) — a weak fit for a new-architecture app and
-  a "latest HIG" goal.
-- `expo-symbols` is maintained but requires bootstrapping the Expo Modules core
-  into a bare project — a heavier native change and more risk for a UI-only task.
-- `react-native-nitro-sfsymbols` is actively maintained, Nitro-based (built for
-  the New Architecture), targets iOS 16+, supports all four rendering modes
-  (monochrome / hierarchical / palette / multicolor) and iOS 17+ symbol effects
-  (bounce / pulse / variable color) that are silently skipped under Reduce
-  Motion, is Dynamic Type and Increase Contrast aware, is decorative-by-default
-  for VoiceOver, and ships strict TypeScript.
+Chosen: the **Mythologi-XR fork** of `react-native-sfsymbols`, installed from
+git (`github:Mythologi-XR/react-native-sfsymbols`). Its podspec sets
+`:ios => "13.0"` and depends only on `React-Core` — no Nitro, no
+New-Architecture requirement. It keeps the "SF Symbols only on iOS" guarantee.
 
-It delivers the same "SF Symbols only on iOS" guarantee with modern rendering
-and built-in accessibility, with only a lightweight Nitro peer. Installed:
-`react-native-nitro-sfsymbols` + its peer `react-native-nitro-modules`.
+Tradeoff (accepted honestly): the iOS-13 fork renders monochrome symbols (plus
+`multicolor`) and does **not** support hierarchical/palette rendering modes or
+native symbol effects (bounce / pulse / variable color). As a result:
+
+- `AppIcon`'s `effect` and `rendering` props stay in the public API for
+  source-compatibility but are no-ops on the native symbol.
+- The "running build" animation is now **JS-driven** with
+  `react-native-reanimated` (a gentle continuous rotation in `StatusBadge`),
+  gated on Reduce Motion (static when Reduce Motion is on).
+
+Installed: `react-native-sfsymbols` from
+`github:Mythologi-XR/react-native-sfsymbols`. Removed:
+`react-native-nitro-sfsymbols` and its peer `react-native-nitro-modules`.
 
 Rephrased from the design document for brevity.
 
@@ -121,11 +127,11 @@ component uses a raw color literal; the only permitted literals live in
 
 #### Icon tint note (iOS)
 
-`AppIcon.color` accepts any theme `ColorToken`. On iOS the native SF Symbols view
-parses `tintColor` as a hex string, so a hex color is applied directly; a
-`PlatformColor` `OpaqueColorValue` (which cannot be expressed as a static hex)
-is not forwarded, and the symbol keeps the dynamic system label tint — which
-already tracks light/dark automatically. On Android the token is a hex string in
+`AppIcon.color` accepts any theme `ColorToken`. On iOS a hex string is forwarded
+to the SF Symbol's `color` prop directly; a `PlatformColor` `OpaqueColorValue`
+(which cannot be expressed as a static hex) is not forwarded, and the symbol
+keeps the dynamic system label tint — which already tracks light/dark
+automatically. On Android the token is a hex string in
 both schemes and is applied to the glyph. This keeps iOS icons system-adaptive
 rather than freezing them to a static color.
 
@@ -273,11 +279,12 @@ snapshot tests.
 The following can only be validated on a device or simulator/emulator and are
 still outstanding. A native build is required first.
 
-1. **`pod install` (iOS).** Run `cd ios && pod install` to link the native
-   dependencies: `react-native-nitro-sfsymbols`, `react-native-nitro-modules`,
+1. **`pod install` (iOS).** Run `cd ios && bundle exec pod install` to link the
+   native dependencies: `react-native-sfsymbols` (iOS-13 fork),
    `react-native-haptic-feedback`, `@react-navigation/native-stack`, and
-   `react-native-screens`. None of this has been run from the current
-   environment.
+   `react-native-screens`. With the Podfile at `platform :ios, '13.0'` and the
+   fork's iOS-13 podspec, resolution is expected to succeed. None of this has
+   been run from the current environment.
 
 2. **Device/appearance matrix.** Verify on:
    - iPhone small (e.g. iPhone SE / 13 mini) and iPhone Pro Max,

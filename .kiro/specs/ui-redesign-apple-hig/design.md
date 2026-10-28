@@ -10,26 +10,38 @@ refactor each screen to consume them.
 
 ## Dependency decisions
 
-### Icon library: `react-native-nitro-sfsymbols` (chosen)
+### Icon library: `react-native-sfsymbols` (iOS-13 fork, chosen)
 
 Candidates considered:
 
 | Library | Status | Fit |
 |---------|--------|-----|
-| `react-native-sfsymbols` (birkir) | Stale (~2022, iOS 14+) | Works but unmaintained; weak fit for a new RN 0.88 / New Architecture app and "latest HIG" goal. |
 | `expo-symbols` | Maintained | Requires bootstrapping Expo Modules core into a bare project — heavier native change, more risk for a UI-only task. |
-| **`react-native-nitro-sfsymbols`** | **Maintained (Dec 2025)** | **Chosen.** Nitro-based (new-architecture native), iOS 16+, all four rendering modes (monochrome/hierarchical/palette/multicolor), iOS 17+ symbol effects (bounce/pulse/variableColor) that are silently skipped under Reduce Motion, Dynamic Type + Increase Contrast aware, decorative-by-default for VoiceOver, strict TypeScript. Maps almost 1:1 to the requirements. |
+| `react-native-nitro-sfsymbols` | Maintained | Nitro-based, feature-rich (all rendering modes + iOS 17 symbol effects) BUT its podspec is locked to `:ios => "16.0"` and cannot be lowered. `pod install` failed with "required a higher minimum deployment target". Incompatible with the iOS 13.0 requirement. |
+| **`react-native-sfsymbols` (Mythologi-XR fork)** | **Chosen** | Podspec sets `:ios => "13.0"` and depends only on `React-Core` (no Nitro, no New-Architecture requirement). Keeps "SF Symbols only on iOS". |
 
-Rationale: the task asked for either `expo-symbols` or `react-native-sfsymbols`,
-but the project is **bare RN 0.88 with the New Architecture**. `expo-symbols`
-would drag in the whole Expo runtime; the classic `react-native-sfsymbols` is
-unmaintained. `react-native-nitro-sfsymbols` delivers the same "SF Symbols only
-on iOS" guarantee with modern rendering modes, symbol effects, and built-in
-accessibility, with a lightweight Nitro peer. This substitution is documented
-here for approval.
+Rationale: the app must support **iOS 13.0**. `react-native-nitro-sfsymbols`
+targets iOS 16.0 with a podspec floor that cannot be changed, so it was
+dropped. The chosen library is the Mythologi-XR fork of
+`react-native-sfsymbols`, whose podspec targets iOS 13.0 and depends only on
+`React-Core`. Installed from git: `github:Mythologi-XR/react-native-sfsymbols`
+(its `package.json` declares the npm name; the pod it vendors is named
+`react-native-sfsymbols`, matching autolinking).
 
-Installed: `react-native-nitro-sfsymbols@^2.0.0`,
-`react-native-nitro-modules@^0.37.1` (peer `>= 0.35`).
+Tradeoff (accepted): the iOS-13 fork renders monochrome symbols (plus
+`multicolor`) and does **not** provide hierarchical/palette rendering modes or
+native symbol effects (bounce/pulse/variableColor). Consequences:
+
+- `AppIcon`'s `effect` and `rendering` props are retained in the public API for
+  source-compatibility but are no-ops on the native symbol.
+- The "running build" animation is now **JS-driven** with
+  `react-native-reanimated` (a gentle continuous rotation in `StatusBadge`),
+  gated on Reduce Motion so it renders static when Reduce Motion is on.
+
+Installed: `react-native-sfsymbols` from
+`github:Mythologi-XR/react-native-sfsymbols` (iOS-13 podspec). The former Nitro
+packages (`react-native-nitro-sfsymbols`, `react-native-nitro-modules`) were
+removed.
 
 ### Haptics: `react-native-haptic-feedback@^3.0.0`
 
@@ -44,10 +56,11 @@ bottom button). All custom animation is gated behind a Reduce Motion check.
 
 ### Native build note
 
-The SF Symbols and Nitro modules are native. A `cd ios && pod install` (via the
-project's bundler setup) is required before the next iOS build. This is a
-manual/CI step captured in tasks.md; it cannot be verified from the current
-environment.
+The SF Symbols module is native. A `cd ios && bundle exec pod install` (via the
+project's bundler setup) is required before the next iOS build. With the Podfile
+at `platform :ios, '13.0'` and the `react-native-sfsymbols` fork's iOS-13
+podspec, pod resolution is expected to succeed. This is a manual/CI step
+captured in tasks.md; it cannot be verified from the current environment.
 
 ## Architecture
 

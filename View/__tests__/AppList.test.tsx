@@ -9,15 +9,17 @@ import {expect, it, describe, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
 
 jest.mock('../../API Calls/TokenStorage', () => ({
-  getToken: jest.fn().mockResolvedValue(null),
-  saveToken: jest.fn().mockResolvedValue(undefined),
-  clearToken: jest.fn().mockResolvedValue(undefined),
+  getToken: jest.fn<() => Promise<string | null>>().mockResolvedValue(null),
+  saveToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  clearToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }));
 
 jest.mock('../../API Calls/APIService', () => ({
   __esModule: true,
   default: class {
-    get = jest.fn().mockResolvedValue({data: [], paging: {next: ''}});
+    get = jest
+      .fn<() => Promise<unknown>>()
+      .mockResolvedValue({data: [], paging: {next: ''}});
   },
 }));
 
@@ -65,7 +67,14 @@ describe('AppList', () => {
 
   it('renders without throwing with an empty app list', async () => {
     const navigation = makeNavigation();
-    const route = {params: {appList: {data: [], paging: {next: ''}} as AppsModel}};
+    const route = {
+      params: {
+        appList: {
+          data: [],
+          paging: {next: '', total_item_count: 0, page_item_limit: 20},
+        } as AppsModel,
+      },
+    };
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
@@ -78,7 +87,14 @@ describe('AppList', () => {
 
   it('shows the empty state after loading with no apps', async () => {
     const navigation = makeNavigation();
-    const route = {params: {appList: {data: [], paging: {next: ''}} as AppsModel}};
+    const route = {
+      params: {
+        appList: {
+          data: [],
+          paging: {next: '', total_item_count: 0, page_item_limit: 20},
+        } as AppsModel,
+      },
+    };
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
@@ -116,7 +132,14 @@ describe('AppList', () => {
 
   it('sets a header Log Out button via setOptions', async () => {
     const navigation = makeNavigation();
-    const route = {params: {appList: {data: [], paging: {next: ''}} as AppsModel}};
+    const route = {
+      params: {
+        appList: {
+          data: [],
+          paging: {next: '', total_item_count: 0, page_item_limit: 20},
+        } as AppsModel,
+      },
+    };
     await act(async () => {
       renderer.create(
         // @ts-expect-error minimal navigation/route stubs for render test

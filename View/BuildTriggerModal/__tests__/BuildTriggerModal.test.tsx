@@ -9,20 +9,29 @@ import {beforeEach, describe, expect, it, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
 
 jest.mock('../../../API Calls/TokenStorage', () => ({
-  getToken: jest.fn().mockResolvedValue('tok'),
-  saveToken: jest.fn().mockResolvedValue(undefined),
-  clearToken: jest.fn().mockResolvedValue(undefined),
+  getToken: jest.fn<() => Promise<string | null>>().mockResolvedValue('tok'),
+  saveToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  clearToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }));
 
 // Capture the post spy via a module-level holder so tests can read call args,
 // mirroring BuildLists.test.tsx. The `mock` prefix lets the factory close over
 // it (jest convention).
-const mockPost = jest.fn().mockResolvedValue({status: 'ok'});
+const mockPost = jest
+  .fn<
+    (
+      url: string,
+      body: unknown,
+      headers: Record<string, string>,
+    ) => Promise<unknown>
+  >()
+  .mockResolvedValue({status: 'ok'});
 
 jest.mock('../../../API Calls/APIService', () => ({
   __esModule: true,
   default: class {
-    post = (...args: unknown[]) => mockPost(...args);
+    post = (url: string, body: unknown, headers: Record<string, string>) =>
+      mockPost(url, body, headers);
   },
 }));
 

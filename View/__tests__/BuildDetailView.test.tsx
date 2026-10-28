@@ -11,9 +11,9 @@ import {BuildState, type Build} from '../../API Calls/BuildModel';
 import type {BuildDetailModel} from '../../API Calls/BuildDetailModel';
 
 jest.mock('../../API Calls/TokenStorage', () => ({
-  getToken: jest.fn().mockResolvedValue('tok'),
-  saveToken: jest.fn().mockResolvedValue(undefined),
-  clearToken: jest.fn().mockResolvedValue(undefined),
+  getToken: jest.fn<() => Promise<string | null>>().mockResolvedValue('tok'),
+  saveToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  clearToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }));
 
 // ApiService.get resolves/rejects per test. The `mock` prefix lets the
@@ -26,13 +26,13 @@ const mockGetRejection: {current: Error | null} = {current: null};
 jest.mock('../../API Calls/APIService', () => ({
   __esModule: true,
   default: class {
-    get = jest.fn().mockImplementation(() => {
+    get = jest.fn<() => Promise<unknown>>().mockImplementation(() => {
       if (mockGetRejection.current) {
         return Promise.reject(mockGetRejection.current);
       }
       return Promise.resolve(mockGetResponse.current);
     });
-    post = jest.fn().mockResolvedValue({status: 'ok'});
+    post = jest.fn<() => Promise<unknown>>().mockResolvedValue({status: 'ok'});
   },
 }));
 
@@ -82,7 +82,7 @@ describe('BuildDetailView', () => {
     jest.useFakeTimers();
     mockGetResponse.current = {log_chunks: [], expiring_raw_log_url: ''};
     mockGetRejection.current = null;
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = jest.fn<() => Promise<unknown>>().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve('line1\nline2'),
     }) as unknown as typeof fetch;
@@ -106,7 +106,7 @@ describe('BuildDetailView', () => {
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
-        // @ts-expect-error minimal navigation/route stubs for render test
+        // minimal navigation/route stubs for render test
         <BuildDetailView navigation={navigation} route={makeRoute(makeBuild({}))} />,
       );
     });
@@ -131,7 +131,7 @@ describe('BuildDetailView', () => {
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
-        // @ts-expect-error minimal navigation/route stubs for render test
+        // minimal navigation/route stubs for render test
         <BuildDetailView navigation={navigation} route={makeRoute(makeBuild({}))} />,
       );
     });
@@ -145,7 +145,7 @@ describe('BuildDetailView', () => {
     let tree!: renderer.ReactTestRenderer;
     await act(async () => {
       tree = renderer.create(
-        // @ts-expect-error minimal navigation/route stubs for render test
+        // minimal navigation/route stubs for render test
         <BuildDetailView navigation={navigation} route={makeRoute(makeBuild({}))} />,
       );
     });
@@ -174,7 +174,7 @@ describe('BuildDetailView', () => {
     const navigation = makeNavigation();
     await act(async () => {
       renderer.create(
-        // @ts-expect-error minimal navigation/route stubs for render test
+        // minimal navigation/route stubs for render test
         <BuildDetailView navigation={navigation} route={makeRoute(makeBuild({}))} />,
       );
     });

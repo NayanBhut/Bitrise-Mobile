@@ -6,7 +6,7 @@ import 'react-native';
 import React from 'react';
 import {expect, it, describe, jest} from '@jest/globals';
 import renderer, {act} from 'react-test-renderer';
-import {SFSymbolView} from 'react-native-nitro-sfsymbols';
+import {SFSymbol} from '@mythologi/react-native-sfsymbols';
 import {ListRow} from '../ListRow';
 import {icons} from '../../Theme/icons';
 
@@ -30,7 +30,7 @@ describe('ListRow', () => {
     });
 
     const symbols = tree.root
-      .findAllByType(SFSymbolView)
+      .findAllByType(SFSymbol)
       .filter(s => s.props.name === icons.chevron.ios);
     expect(symbols).toHaveLength(1);
   });
@@ -42,7 +42,7 @@ describe('ListRow', () => {
     });
 
     const symbols = tree.root
-      .findAllByType(SFSymbolView)
+      .findAllByType(SFSymbol)
       .filter(s => s.props.name === icons.chevron.ios);
     expect(symbols).toHaveLength(0);
   });

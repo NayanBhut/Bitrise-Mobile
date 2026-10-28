@@ -10,9 +10,9 @@ import renderer, {act} from 'react-test-renderer';
 import {BuildState, type Build, type BuildModel} from '../../API Calls/BuildModel';
 
 jest.mock('../../API Calls/TokenStorage', () => ({
-  getToken: jest.fn().mockResolvedValue('tok'),
-  saveToken: jest.fn().mockResolvedValue(undefined),
-  clearToken: jest.fn().mockResolvedValue(undefined),
+  getToken: jest.fn<() => Promise<string | null>>().mockResolvedValue('tok'),
+  saveToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  clearToken: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 }));
 
 // The render test must not hit the network. ApiService.get resolves to a
@@ -25,8 +25,10 @@ const mockGetResponse: {current: BuildModel} = {
 jest.mock('../../API Calls/APIService', () => ({
   __esModule: true,
   default: class {
-    get = jest.fn().mockImplementation(() => Promise.resolve(mockGetResponse.current));
-    post = jest.fn().mockResolvedValue({status: 'ok'});
+    get = jest
+      .fn<() => Promise<unknown>>()
+      .mockImplementation(() => Promise.resolve(mockGetResponse.current));
+    post = jest.fn<() => Promise<unknown>>().mockResolvedValue({status: 'ok'});
   },
 }));
 

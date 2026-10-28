@@ -1,24 +1,49 @@
 import React from 'react';
-import {Platform, StyleSheet, Text, TextStyle} from 'react-native';
-import {
-  SFSymbolAnimationType,
-  SFSymbolRenderingMode,
-  SFSymbolScale,
-  SFSymbolView,
-  SFSymbolWeight,
-} from 'react-native-nitro-sfsymbols';
+import {Platform, StyleSheet, Text, TextStyle, View} from 'react-native';
+import {SFSymbol} from '@mythologi/react-native-sfsymbols';
 import {ColorToken} from '../Theme/colors';
 import {icons, IconName} from '../Theme/icons';
-import {useTheme} from '../Theme/useTheme';
 
-/** Stroke weight matched to adjacent text. */
-export type AppIconWeight = SFSymbolWeight;
+/**
+ * Stroke weight matched to adjacent text. String enum accepted by the
+ * `react-native-sfsymbols` (iOS 13+) `<SFSymbol weight>` prop.
+ */
+export type AppIconWeight =
+  | 'ultralight'
+  | 'light'
+  | 'thin'
+  | 'regular'
+  | 'medium'
+  | 'semibold'
+  | 'bold'
+  | 'heavy';
 /** Visual scale of the symbol. */
-export type AppIconScale = SFSymbolScale;
-/** Color rendering mode. */
-export type AppIconRendering = SFSymbolRenderingMode;
-/** Symbol effect; applied only when Reduce Motion is off. */
-export type AppIconEffect = SFSymbolAnimationType;
+export type AppIconScale = 'small' | 'medium' | 'large';
+/**
+ * Color rendering mode. Retained for source-compatibility only; the iOS-13
+ * library renders monochrome (plus `multicolor`) and does NOT support
+ * hierarchical/palette rendering, so this prop is accepted but ignored.
+ */
+export type AppIconRendering =
+  | 'monochrome'
+  | 'hierarchical'
+  | 'palette'
+  | 'multicolor';
+/**
+ * Symbol effect. Retained for source-compatibility only; the iOS-13 library
+ * has no native symbol effects (bounce/pulse/variableColor), so this prop is
+ * accepted but NOT forwarded to the native symbol. Running-build motion is
+ * driven in JS by the caller (see StatusBadge), gated on Reduce Motion.
+ */
+export type AppIconEffect =
+  | 'bounce'
+  | 'pulse'
+  | 'scale'
+  | 'rotate'
+  | 'appear'
+  | 'disappear'
+  | 'replace'
+  | 'variableColor';
 
 export interface AppIconProps {
   /** Semantic icon name resolved through the theme icon map. */
@@ -33,16 +58,23 @@ export interface AppIconProps {
    * Tint color. Accepts any theme {@link ColorToken} so callers can pass a
    * color straight from `useTheme().colors` without stringifying it.
    *
-   * On iOS the native SF Symbols view parses `tintColor` as a hex string, so a
-   * hex color is applied directly; a `PlatformColor` `OpaqueColorValue` (which
-   * cannot be expressed as hex) is not forwarded and the symbol keeps the
-   * dynamic system label tint, which already tracks light/dark automatically.
-   * On Android the token (hex string in both schemes) is applied to the glyph.
+   * On iOS a hex string is forwarded to the SF Symbol's `color` prop; a
+   * `PlatformColor` `OpaqueColorValue` (which cannot be expressed as hex) is
+   * not forwarded and the symbol keeps the dynamic system label tint, which
+   * already tracks light/dark automatically. On Android the token (hex string
+   * in both schemes) is applied to the glyph.
    */
   color?: ColorToken;
-  /** Color rendering mode (iOS). */
+  /**
+   * Color rendering mode (iOS). Accepted but ignored: the iOS-13 library does
+   * not support hierarchical/palette rendering.
+   */
   rendering?: AppIconRendering;
-  /** Symbol effect (iOS 17+); skipped when Reduce Motion is enabled. */
+  /**
+   * Symbol effect. Accepted but ignored on the native symbol: the iOS-13
+   * library has no native symbol effects. Running-build motion is handled in
+   * JS by the caller (see StatusBadge), gated on Reduce Motion.
+   */
   effect?: AppIconEffect;
   /**
    * When provided, the icon is exposed to assistive tech with this label.
@@ -53,43 +85,62 @@ export interface AppIconProps {
 
 /**
  * Cross-platform icon wrapper. Renders an SF Symbol on iOS via
- * `react-native-nitro-sfsymbols` and the mapped Material Symbol glyph on
- * Android. Decorative by default; pass `accessibilityLabel` to expose it.
+ * `react-native-sfsymbols` (the iOS-13+ fork) and the mapped Material Symbol
+ * glyph on Android. Decorative by default; pass `accessibilityLabel` to
+ * expose it.
  *
- * Symbol effects are applied only when `useTheme().reduceMotion` is `false`.
+ * BEHAVIOR CHANGE (iOS-13 library tradeoff): the app must support iOS 13.0, so
+ * the icon library was switched from `react-native-nitro-sfsymbols` (locked to
+ * iOS 16.0) to the iOS-13 `react-native-sfsymbols` fork. That library does NOT
+ * provide native symbol effects (bounce/pulse/variableColor) or
+ * hierarchical/palette rendering. Consequently:
+ *   - `effect` is retained in the API but is a no-op on the native symbol. The
+ *     running-build animation is now driven in JS with react-native-reanimated
+ *     by the caller (StatusBadge), gated on `useTheme().reduceMotion`.
+ *   - `rendering` is retained in the API but ignored (monochrome only).
  */
+// Note: `rendering` and `effect` are part of AppIconProps and accepted for
+// source-compatibility, but they are intentionally NOT destructured here or
+// forwarded to the native symbol — the iOS-13 library supports neither (see
+// the behavior note above).
 export function AppIcon({
   name,
   size = 24,
   weight,
   scale,
   color,
-  rendering,
-  effect,
   accessibilityLabel,
 }: AppIconProps) {
-  const {reduceMotion} = useTheme();
   const mapping = icons[name];
   const hasLabel = accessibilityLabel != null;
 
   if (Platform.OS === 'ios') {
-    // The native view parses `tintColor` as a hex string; forward a hex string
-    // so it is applied, and omit a non-string PlatformColor token so the symbol
-    // keeps its dynamic system label tint rather than an unparseable value.
+    // Forward a hex string tint directly; omit a non-string PlatformColor token
+    // so the symbol keeps its dynamic system label tint rather than an
+    // unparseable value. (The fork's `color` could accept PlatformColor via
+    // processColor, but we intentionally preserve the existing
+    // hex-only-forward behavior AppIcon has today.)
     const tint = typeof color === 'string' ? color : undefined;
+    // The fork's `SFSymbol` props type does not declare `accessibilityLabel`,
+    // so carry accessibility on a wrapping View: labelled when provided,
+    // decorative (hidden from screen readers) by default — matching the Android
+    // branch's semantics.
     return (
-      <SFSymbolView
-        name={mapping.ios}
-        size={size}
-        weight={weight}
-        scale={scale}
-        tintColor={tint}
-        renderingMode={rendering}
-        animation={
-          effect && !reduceMotion ? {type: effect, repeating: true} : undefined
-        }
+      <View
+        accessible={hasLabel}
         accessibilityLabel={accessibilityLabel}
-      />
+        accessibilityElementsHidden={!hasLabel}
+        importantForAccessibility={hasLabel ? 'yes' : 'no-hide-descendants'}>
+        <SFSymbol
+          // `icons[name].ios` is a plain SF Symbol string; the fork types
+          // `name` as a large `SymbolName` union, so cast at this one call site.
+          name={mapping.ios as never}
+          size={size}
+          weight={weight}
+          scale={scale}
+          color={tint}
+        />
+      </View>
     );
   }
 
