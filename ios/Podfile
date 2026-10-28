@@ -42,5 +42,18 @@ target 'Bitrise' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+
+    # Xcode 27 rejects any deployment target below iOS 15.0 as a hard error, but
+    # react_native_post_install does not raise resource-bundle sub-targets (e.g.
+    # AsyncStorage-AsyncStorage_resources), which can keep a stale 13.0 value.
+    # Force every target — including resource bundles — to the RN 0.88 floor.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current.nil? || current.to_f < 15.1
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        end
+      end
+    end
   end
 end
