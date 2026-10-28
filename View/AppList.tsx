@@ -472,7 +472,7 @@ const AppList = ({navigation, route}: AppListScreenProps) => {
                 color={typeof colors.accent === 'string' ? colors.accent : undefined}
               />
             </View>
-          ) : null
+          ) : undefined
         }
       />
     );

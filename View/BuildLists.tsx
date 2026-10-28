@@ -310,7 +310,7 @@ const BuildListView = ({navigation, route}: BuildListScreenProps) => {
                 color={typeof accentColor === 'string' ? accentColor : undefined}
               />
             </View>
-          ) : null
+          ) : undefined
         }
       />
     );
