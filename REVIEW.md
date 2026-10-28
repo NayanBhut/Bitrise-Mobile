@@ -465,18 +465,67 @@ tests); `npx tsc --noEmit` → **0 errors**.
 
 ## Device-only items still needing a manual pass
 
-Audited statically above; these require hardware and could not be executed:
+Everything below was **audited statically** from source — no hardware testing
+was performed. Each item **requires device verification — audited statically**
+and must be confirmed on a real device/simulator before shipping:
 
-- Live VoiceOver / TalkBack focus order and decorative-icon suppression
-  (F-13, F-14).
-- Real-time light/dark appearance switching and the header color fix (F-2, F-5).
-- On-device contrast of status/ANSI colors in both modes (F-6, F-7, F-4).
-- iPad readable-width layout and large-title collapse behavior (F-10).
-- Scroll smoothness / freeze test for the full-log screen before and after the
-  F-15 fix.
-- Haptic feel on trigger/abort/press.
-- Native sheet detent / grab-handle feel (F-12) and swipe-to-abort gesture
-  (F-11).
-- Building/running the iOS app after `pod install` (SF Symbols native module);
-  Android Material Symbols font rendering (F-1).
-- Dynamic Type at the largest accessibility sizes across all screens.
+- **Live VoiceOver / TalkBack** focus order and decorative-icon suppression
+  (F-13, F-14) — *requires device verification — audited statically.*
+- **Real-time light/dark appearance switching** and the header color fix
+  (F-2, F-5) — *requires device verification — audited statically.*
+- **On-device contrast** of status/ANSI colors in both modes (F-6, F-7, F-4) —
+  *requires device verification — audited statically.*
+- **iPad readable-width layout** and large-title collapse behavior (F-10) —
+  *requires device verification — audited statically.*
+- **Scroll smoothness / freeze test** for the full-log screen before and after
+  the F-15 fix — *requires device verification — audited statically.*
+- **Haptic feel** on trigger/abort/press — *requires device verification —
+  audited statically.*
+- **Native sheet detent / grab-handle feel** (F-12) and **swipe-to-abort
+  gesture** (F-11) — *requires device verification — audited statically.*
+- **Building/running the app** — iOS after `pod install` (SF Symbols native
+  module); Android Material Symbols font rendering (F-1) — *requires device
+  verification — audited statically.*
+- **Dynamic Type** at the largest accessibility sizes across all screens —
+  *requires device verification — audited statically.*
+
+---
+
+## Ready to ship
+
+A static, automated-gate view. The three green gates below are confirmed by
+tooling; the manual device matrix is **not yet done** and is required before
+release. **No hardware testing has been performed in this pass.**
+
+**Green gates (confirmed, re-run from repo root this pass):**
+
+- [x] **Guardrails** — `git diff 56012e9 HEAD -- "API Calls/"
+  "View/APIConstants/"` is **EMPTY** (data layer untouched; no
+  renames/deletes; `BuidDetailView.tsx` misspelling and routes intact).
+- [x] **Lint** — `npm run lint` → **0 errors** (2 pre-existing
+  `RadioButton.tsx` inline-style warnings, no new warnings).
+- [x] **Tests** — `npm test` → **107/107 passing, 23 suites, 0 skipped**.
+- [x] **Types** — `npx tsc --noEmit` → **0 errors** (strict mode intact, no
+  weakened types).
+
+**Still outstanding — manual device testing (must pass before shipping):**
+
+- [ ] iPhone **small** (e.g. iPhone SE / 13 mini) — layout, large titles,
+  touch targets.
+- [ ] iPhone **Pro Max** — layout and large-title collapse.
+- [ ] **iPad** — readable max-content-width column (F-10), not edge-to-edge.
+- [ ] **Android** device/emulator — palette, Material Symbols font (F-1),
+  TalkBack.
+- [ ] **Light appearance** — contrast and header chrome in light mode.
+- [ ] **Dark appearance** — contrast and header chrome in dark mode; live
+  switching (F-2).
+- [ ] **Largest Dynamic Type** (accessibility sizes) across all screens —
+  no clipping, icon/text scale balance (F-9).
+- [ ] Live **VoiceOver / TalkBack** pass (F-13, F-14).
+- [ ] Full-log **scroll smoothness / no-freeze** check (F-15).
+- [ ] **Haptics** feel on trigger/abort/press.
+- [ ] iOS **build + run** after `pod install`; Android build + run.
+
+This checklist is not fully satisfied: the green gates pass, but the device
+matrix above remains to be executed on real hardware. **Do not treat any
+device-matrix item as verified until it is run on a device.**
